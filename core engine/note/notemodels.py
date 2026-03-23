@@ -14,6 +14,7 @@ from typing import List, Optional
 from datetime import datetime,timezone 
 # datetime 有module和class重名
 import hashlib
+from note.utils import calculate_checksum
 
 @dataclass
 class Note:
@@ -38,7 +39,7 @@ class Note:
             self.sort_field=self.fields[0].strip() if self.fields else ""
             
         if self.checksum is None:
-            self.checksum=self.__calculate_checksum(self.fields)
+            self.checksum=calculate_checksum(self.fields)
 
         now=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
         # if the created_at and updated_at are not set, set them to the current time
@@ -47,12 +48,7 @@ class Note:
         if not self.updated_at:
             self.updated_at=now
 
-    @staticmethod
-    def __calculate_checksum(fields:List[str]):
-        # generate hash from fields, hashlib is more secure than hash for long-term storage
-        new_fields="|".join(field.strip() for field in fields)
-        # to differentiate ['a','b','c'] and ['a','bc']
-        return hashlib.sha256(new_fields.encode('utf-8')).hexdigest()
+
 
     @staticmethod
     def __validation_content(value,name:str):
@@ -73,6 +69,11 @@ class Note:
         if not isinstance(note_type_id, int) or note_type_id <= 0:
             raise ValueError("Note type id is not an integer or is not positive")
         return True
+
+    def refresh(self):
+        self.updated_at=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+        self.checksum=calculate_checksum(self.fields)
+        self.sort_field=self.fields[0].strip() if self.fields else ""
     # don't need to define __repr__ method, dataclass will generate it
     # def __repr__(self):
     #     return f"Note(id={self.note_id}, note_type_id={self.note_type_id}, fields={self.fields}, 

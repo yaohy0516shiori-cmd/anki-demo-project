@@ -12,30 +12,30 @@ from datetime import datetime,timezone
 import hashlib# class name should be capitalized
 
 class NoteType:
-    def __init__(self,type_id:int,name:str,field_names:List[str],kind:str):
+    def __init__(self,note_type_id:int,name:str,field_names:List[str],kind:str):
         # private attributes to prevent external modification
         # __init__ will be called when a new note type is created
         # judge the type of the arguments
         kind_list=["basic", "cloze", "basic_reverse"]
-        if not isinstance(type_id, int):
-            raise ValueError("Type id is not an integer")
+        if not isinstance(note_type_id, int):
+            raise ValueError("Type id is an integer")
         if name is None or name.strip() == "" or not isinstance(name, str):
-            raise TypeError("Name is not a string")
+            raise TypeError("Name is a string")
         if not isinstance(field_names, list):
-            raise TypeError("Field names is not a list")
+            raise TypeError("Field names is a list")
         if not all(isinstance(item, str) for item in field_names):
-            raise TypeError("Field names is not a list of strings")
+            raise TypeError("Field names is a list of strings")
         if kind not in kind_list:
             raise TypeError("Kind is not legal")
-        self.__type_id=type_id
+        self.__note_type_id=note_type_id
         self.__name=name
         self.__field_names=list(field_names)
         self.__kind=kind
     # Internal attributes and external attributes should be named separately.
     # otherwise, it will be confusing.
     @property
-    def type_id(self):
-        return self.__type_id
+    def note_type_id(self):
+        return self.__note_type_id
     @property
     def type_name(self):
         return self.__name
@@ -46,15 +46,14 @@ class NoteType:
     def type_kind(self):
         return self.__kind
     def __repr__(self):
-        return f"NoteType(id={self.__type_id}, name={self.__name}, field_names={self.__field_names}, kind={self.__kind})"
+        return f"NoteType(id={self.__note_type_id}, name={self.__name}, field_names={self.__field_names}, kind={self.__kind})"
     def to_dict(self):
         return {
-            "id": self.__type_id,
+            "id": self.__note_type_id,
             "name": self.__name,
             "field_names": self.__field_names,
             "kind": self.__kind
         }
-    # what is cls?
     @classmethod
     def from_dict(cls, data:dict):
         return cls(data["id"], data["name"], data["field_names"], data["kind"])
