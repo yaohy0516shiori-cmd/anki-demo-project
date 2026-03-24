@@ -5,27 +5,28 @@ Not responsible for the consistency of underlying objects, that part is entruste
 '''
 from note.notemodels import Note
 from note.utils import calculate_checksum
+from note.repository import InMemoryRepository_note
 
 class NoteService:
-    def __init__(self, repository):
-        self._repository = repository
+    def __init__(self, repository_note:InMemoryRepository_note):
+        self._repository_note = repository_note
 
     def create_note(self, note_type, fields, tags=None,note_id=None):
         self.__validate_fields(note_type, fields)
         if self.is_duplicate(fields,note_id):
             raise ValueError("The note is duplicate")
         note=Note(note_type_id=note_type.note_type_id, fields=fields, tags=tags)
-        return self._repository.add_note(note)
+        return self._repository_note.add_note(note)
 
 
     def get_note(self, note_id):
-        return self._repository.get_note(note_id)
+        return self._repository_note.get_note(note_id)
 
     def list_notes(self):
-        return self._repository.get_all_notes()
+        return self._repository_note.get_all_notes()
 
     def update_note(self, note_id, fields=None, tags=None):
-        note = self._repository.get_note(note_id)
+        note = self._repository_note.get_note(note_id)
         if self.is_duplicate(note.fields,note_id):
             raise ValueError("The note is duplicate")
         if fields is not None:
@@ -36,14 +37,14 @@ class NoteService:
                 note.fields=fields
         if tags is not None:
             note.tags=tags
-        return self._repository.update_note(note)
+        return self._repository_note.update_note(note)
 
     def delete_note(self, note_id):
-        return self._repository.delete_note(note_id)
+        return self._repository_note.delete_note(note_id)
 
     def is_duplicate(self, fields, exclude_note_id=None):
         tempchecksum=calculate_checksum(fields)
-        notes=self._repository.get_all_notes()
+        notes=self._repository_note .get_all_notes()
         for note in notes:
             if note.note_id==exclude_note_id and exclude_note_id is not None:
                 continue
