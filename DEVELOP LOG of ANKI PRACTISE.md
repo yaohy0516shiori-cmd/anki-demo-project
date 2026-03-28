@@ -238,13 +238,13 @@ rslib/src/collection/
 | `template` / 展示逻辑 | 决定这张卡怎么复习             | 正面显示什么、背面显示什么、basic 或 reversed 形式                                                  |
 
 **问题：**
- 既然 ranking 结果最终会更新到 `card`，为什么还需要单独的 `reviewlog`。
+既然 ranking 结果最终会更新到 `card`，为什么还需要单独的 `reviewlog`。
 
 **结论：**
- `card` 负责保存最新状态，`reviewlog` 负责保存每次复习事件的历史。只存 `card` 会丢失评分过程、旧状态和学习轨迹，导致统计、调试和后续分析都很困难，因此 `reviewlog` 仍然有必要保留。
+`card` 负责保存最新状态，`reviewlog` 负责保存每次复习事件的历史。只存 `card` 会丢失评分过程、旧状态和学习轨迹，导致统计、调试和后续分析都很困难，因此 `reviewlog` 仍然有必要保留。
 
 **下一步：**
- 给 `ReviewLog` 先定一个最小字段集合，例如 `card_id / reviewed_at / rating / old_status / new_status / old_interval / new_interval`，先保证历史事件可以被记录下来。
+给 `ReviewLog` 先定一个最小字段集合，例如 `card_id / reviewed_at / rating / old_status / new_status / old_interval / new_interval`，先保证历史事件可以被记录下来。
 
 # **2026-03-07**
 
@@ -291,9 +291,7 @@ The `note` module is responsible for storing the original learning content and m
 #### Storage
 
 The note records should be stored in SQLite.
- A note table can be used to store the main content, while tags and groups can either be stored directly or normalized into separate tables depending on project complexity.
-
-
+A note table can be used to store the main content, while tags and groups can either be stored directly or normalized into separate tables depending on project complexity.
 
 # **2026-03-11**
 
@@ -340,7 +338,7 @@ The note records should be stored in SQLite.
 - `scheduler`：决定什么时候复习
 - `review_log`：记录复习结果
 
-------
+---
 
 ### **Q：`answer question / cloze / reverse` 属于 `note` 吗？**
 
@@ -352,7 +350,7 @@ The note records should be stored in SQLite.
 - `reverse`
   这些是 **题型/模板规则**，不是 `note` 本体功能。
 
-------
+---
 
 ### **Q：`note` 模块最核心的职责是什么？**
 
@@ -363,7 +361,7 @@ The note records should be stored in SQLite.
 - `note` 不是调度层
 - `note` 更像知识源文件
 
-------
+---
 
 ## 为什么还需要 Notetype
 
@@ -388,7 +386,7 @@ fields = ["CPU", "Central Processing Unit"]
 - `Notetype` = 结构定义 / 模板
 - `Note` = 一条具体数据
 
-------
+---
 
 ### **Q：那 `note_type_id` 的作用到底是什么？**
 
@@ -396,7 +394,7 @@ fields = ["CPU", "Central Processing Unit"]
 `Note` 自己不会存整个 `Notetype`，只存一个 `note_type_id`。
 之后运行时需要通过这个 id 再找回对应的 `Notetype`。
 
-------
+---
 
 ### **Q：我困惑的点是不是中间少了一个 lookup 过程？**
 
@@ -412,7 +410,7 @@ fields = ["CPU", "Central Processing Unit"]
 note_type = note_type_repo.get(note.note_type_id)
 ```
 
-------
+---
 
 ## NoteType、Note、Card 的关系
 
@@ -432,7 +430,7 @@ note_type = note_type_repo.get(note.note_type_id)
 Notetype -> Note -> Card
 ```
 
-------
+---
 
 ### **Q：`Note` 和 `Notetype` 是继承关系吗？**
 
@@ -449,7 +447,7 @@ Notetype -> Note -> Card
 - `Note` 是实例/数据
 - 它们不是父子类
 
-------
+---
 
 ## 关于字段设计的理解
 
@@ -462,7 +460,7 @@ Notetype -> Note -> Card
 - `field_names`：定义字段名称和顺序
 - `kind`：定义行为规则，例如 `basic`、`cloze`
 
-------
+---
 
 ### **Q：`Note` 的几个字段分别干嘛？**
 
@@ -476,7 +474,7 @@ Notetype -> Note -> Card
 - `checksum`：内容指纹
 - `created_at / updated_at`：时间信息
 
-------
+---
 
 ## checksum 到底是什么
 
@@ -498,7 +496,7 @@ Notetype -> Note -> Card
 - 检测数据库损坏
 - 做 web 专用校验
 
-------
+---
 
 ### **Q：为什么不直接对全部内容做 hash？**
 
@@ -509,7 +507,7 @@ Notetype -> Note -> Card
 
 你现在第一版先做简单点就行。
 
-------
+---
 
 ## 代码实现里踩过的坑
 
@@ -517,7 +515,7 @@ Notetype -> Note -> Card
 
 **A：因为 `@property` 不能写在 `__init__` 里面，只能写在类体里。**
 
-------
+---
 
 **Q：为什么 property 会无限递归？**
 **A：因为内部属性和 property 重名了。**
@@ -538,7 +536,7 @@ def fields(self):
 - 内部用 `__fields`
 - 外部 property 叫 `fields`
 
-------
+---
 
 ### **Q：为什么一直强调统一用 `__fields / __tags / __note_type_id`？**
 
@@ -551,14 +549,14 @@ def fields(self):
 
 这样对象内部状态会乱。
 
-------
+---
 
 ### **Q：为什么 `update()` 里还要同步更新 `sort_field / checksum / updated_at`？**
 
 **A：因为这些是依赖 `fields` 的派生数据。**
 如果字段变了，这些也必须重算。
 
-------
+---
 
 ### **Q：`set_id()` 为什么存在？id 不应该系统自动分配吗？**
 
@@ -569,7 +567,7 @@ def fields(self):
 - 保存时系统分配 id
 - 一旦设定，不能再改
 
-------
+---
 
 ## copy 和封装
 
@@ -584,7 +582,7 @@ def fields(self):
 - updated_at 不更新
 - 封装失效
 
-------
+---
 
 ### **Q：为什么 property 返回 `list(self.__tags)`，也要再 copy 一次？**
 
@@ -604,7 +602,7 @@ note.tags.append("xxx")
 
 所以返回副本是为了保护内部状态。
 
-------
+---
 
 ### **Q：浅拷贝够吗？**
 
@@ -616,7 +614,7 @@ note.tags.append("xxx")
 - 不可变对象
 - 单独建模
 
-------
+---
 
 ## 校验到底该放哪里
 
@@ -637,7 +635,7 @@ note.tags.append("xxx")
 
 但你现在第一版，为了简单，先放在 `Note` 里并传入 `note_type` 也可以。
 
-------
+---
 
 ### **Q：`__validate_string_list()` 这段是干嘛的？**
 
@@ -650,7 +648,7 @@ note.tags.append("xxx")
 
 因为 Python 的类型标注不会自动帮你拦截错误输入。
 
-------
+---
 
 ### **Q：空字符串应该允许吗？**
 
@@ -661,7 +659,7 @@ note.tags.append("xxx")
 
 所以“是否允许空”最好按对象类型分别处理。
 
-------
+---
 
 ## Conclusion
 
@@ -686,51 +684,49 @@ note.tags.append("xxx")
 
 一旦这几层分开，整个设计就顺很多。
 
-------
+---
 
 **brief recap:** 这两天最核心的问题不是语法，而是职责混淆：先是把 `note` 模块想得太大，后来又混淆了 `Notetype`、`Note`、`Card`、`checksum`、`id`、copy、property 和校验边界。现在已经理清：`Notetype` 定义结构，`Note` 保存内容，`Card` 是生成结果；`checksum` 是内容指纹；`id` 只允许系统设置一次；`fields/tags` 要复制并通过 property 返回副本；依赖 `Notetype` 的合法性判断最终更适合放到 service/validator。
-
-
 
 # **2026-3-16**
 
 ## 1. 模型边界
 
 **Q：`Note` / `NoteType` 里要不要写 judge？现在这两个类主要补什么？**
- A：不要写 judge，放在 `service layer`。这两个类现在补的是模型自身完整性：基础校验、`__touch()`、`to_dict()`、`from_dict()`、tag 基础操作、占位注释。
+A：不要写 judge，放在 `service layer`。这两个类现在补的是模型自身完整性：基础校验、`__touch()`、`to_dict()`、`from_dict()`、tag 基础操作、占位注释。
 
-------
+---
 
 ## 2. `tags` / `fields` 的“整体”和“单个元素”
 
 **Q：`tags` 不是 list 吗，为什么 `add_tag()` 只收一个 tag？tag 要不要限制类型？**
- A：`tags` 是整个列表，`tag` 是列表里的一个元素，所以 `add_tag()` 收单个值。内部最好统一存成 `list[str]`；外部输入可以先转成 `str` 再放进去。
+A：`tags` 是整个列表，`tag` 是列表里的一个元素，所以 `add_tag()` 收单个值。内部最好统一存成 `list[str]`；外部输入可以先转成 `str` 再放进去。
 
-------
+---
 
 ## 3. `__touch__`、`to_dict()`、`from_dict()`
 
 **Q：`__touch()` 是干嘛的？`to_dict()` / `from_dict()` 是什么意思？`from_dict()` return 的是什么？**
- A：`__touch()` 用来统一更新 `updated_at`。`to_dict()` 是把对象变成普通字典，方便保存；`from_dict()` 是把字典变回对象。`from_dict()` return 的是一个新对象，不是字典。
+A：`__touch()` 用来统一更新 `updated_at`。`to_dict()` 是把对象变成普通字典，方便保存；`from_dict()` 是把字典变回对象。`from_dict()` return 的是一个新对象，不是字典。
 
 ## 4. 名字、对象、调用
 
 **Q：函数名和函数有什么区别？类和类名有什么区别？为什么加不加括号差很多？**
- A：名字只是引用。`hello` 是函数对象，`hello()` 是调用函数；`NoteType` 是类对象，`NoteType()` 是创建实例。核心就是：**不带括号拿到对象本身，带括号表示调用。**
+A：名字只是引用。`hello` 是函数对象，`hello()` 是调用函数；`NoteType` 是类对象，`NoteType()` 是创建实例。核心就是：**不带括号拿到对象本身，带括号表示调用。**
 
-------
+---
 
 ## 5. 装饰器、语法糖、`@classmethod`
 
 **Q：装饰器到底是什么？为什么它和函数名/函数本身有关？`@classmethod` 又是什么？**
- A：因为函数本身也是对象，所以可以被传进别的函数里处理。装饰器本质就是：`f = deco(f)`。`@classmethod` 也是这个逻辑，它把普通函数变成“调用时自动接收类本身”的方法，所以 `from_dict()` 适合用它。
+A：因为函数本身也是对象，所以可以被传进别的函数里处理。装饰器本质就是：`f = deco(f)`。`@classmethod` 也是这个逻辑，它把普通函数变成“调用时自动接收类本身”的方法，所以 `from_dict()` 适合用它。
 
-------
+---
 
 ## 6. `self`、`cls`
 
 **Q：`self` 和 `cls` 到底是什么？**
- A：`self` 是实例对象，`cls` 是类本身。实例方法处理“某个对象”，类方法处理“这个类”。
+A：`self` 是实例对象，`cls` 是类本身。实例方法处理“某个对象”，类方法处理“这个类”。
 
 ## note 模块整理
 
@@ -771,44 +767,44 @@ NoteType -> Service -> Repository -> Note
 - 业务规则 -> service
 ```
 
-------
+---
 
 ## 1. `Repository` 和 `Service` 都有 CRUD，区别是什么？
 
 **答：**不是一回事。
- `Repository` 的 CRUD 是“存取动作本身”。
- `Service` 的 CRUD 是“带业务规则的完整流程”。
+`Repository` 的 CRUD 是“存取动作本身”。
+`Service` 的 CRUD 是“带业务规则的完整流程”。
 
-------
+---
 
 ## 2. `exclude_note_id` 是做什么的？
 
 **答：**更新时查重用来排除自己。
- 否则一条 note 更新时会把自己也算进重复项，误判为 duplicate。
+否则一条 note 更新时会把自己也算进重复项，误判为 duplicate。
 
-------
+---
 
 ## 3. duplicate 应该怎么改？
 
 **答：**改成“纯 checksum 比较”。
- 不要为了查重临时创建 `Note` 对象。
- 应该把 checksum 计算提成普通函数，然后 `service.is_duplicate()` 直接比较 checksum
+不要为了查重临时创建 `Note` 对象。
+应该把 checksum 计算提成普通函数，然后 `service.is_duplicate()` 直接比较 checksum
 
-------
+---
 
 ## 4. `service.create_note()` 第一个参数该传什么？
 
 **答：**长期设计更合理的是传 `note_type_id`。
- 但因为目前还没做 `NoteType` 存取层，所以暂时先放一放，后续再改
+但因为目前还没做 `NoteType` 存取层，所以暂时先放一放，后续再改
 
-------
+---
 
 ## 5. `exceptions.py` 是做什么的？
 
 **答：**放自定义异常类。
- 当前不是必须，后面错误类型变多、测试需要精确断言、或者接 API 层时再引入。
+当前不是必须，后面错误类型变多、测试需要精确断言、或者接 API 层时再引入。
 
-------
+---
 
 ## 7. `card` 模块里的 model / repo / service 又怎么分？
 
@@ -816,7 +812,7 @@ NoteType -> Service -> Repository -> Note
 - repo：`Card` 怎么存取
 - service：根据 `Note` 和 `NoteType` 生成 card，处理 card 的业务规则
 
-------
+---
 
 ## `note` 和 `card` 里的 `repo` / `service` 区别是什么？
 
@@ -836,7 +832,7 @@ NoteType -> Service -> Repository -> Note
 
 **`note.service` 管 note 怎么合法地创建和修改；`card.service` 管 note 怎么被加工成 card。**
 
-------
+---
 
 ## 8. 这是不同的数据库存取吗？
 
@@ -857,7 +853,7 @@ NoteType -> Service -> Repository -> Note
 
 所以更准确地说是：
 
-**不同对象各有自己的 repository，不一定是不同数据库。** 
+**不同对象各有自己的 repository，不一定是不同数据库。**
 
 ## 当前决策
 
@@ -865,3 +861,38 @@ NoteType -> Service -> Repository -> Note
 - 暂不做自动化测试流程
 - `create_note(note_type_id, ...)` 的改动先记入后续开发日志
 - 下一阶段进入 `card` 模块设计
+
+# **2026-03-24**
+
+### card model 负责什么
+
+定义“卡片对象本身有哪些属性、有哪些最基本行为”。
+
+例如：
+
+- 这张卡属于哪个 note
+- 它是 note 的第几张派生卡
+- 当前状态是什么
+- 当前到期时间是什么
+- 间隔、难度这些调度字段是什么
+
+### card repository 负责什么
+
+负责 card 的存取：
+
+- add card
+- get by id
+- get by note id
+- update
+- delete
+
+它只管“存和取”，不管业务规则。
+
+### card service 负责什么
+
+负责业务流程：
+
+- 根据一个 note 创建对应 card
+- 查找待复习 card
+- 提交评分后更新 card 状态
+- 调用 scheduler 算法改 card

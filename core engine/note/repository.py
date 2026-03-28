@@ -55,7 +55,6 @@ class InMemoryRepository_note:
             raise TypeError("Note id is not an integer")
         elif note.note_id not in self.__notes:
             raise ValueError("Note not found")
-        note.refresh()
         serialized_note=self.__serialize_note(note)
         self.__notes[note.note_id]=serialized_note
         return note.note_id

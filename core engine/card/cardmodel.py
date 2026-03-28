@@ -18,13 +18,13 @@ how many times it has been imported
 '''
 from datetime import datetime,timezone 
 
-class cardmodel:
+class Card:
     select_status={'new','learning','review','relearning'}
 
     def __init__(
         self,
         note_id:int,
-        temp_ord:int,
+        template_ord:int,
         card_id:int | None=None,
         status:str='new',
         due: datetime | None=None,
@@ -37,7 +37,7 @@ class cardmodel:
         ):
         if note_id <=0:
             raise ValueError("Note id must be positive")
-        if temp_ord <=0:
+        if template_ord <0:
             raise ValueError("Temp ord must be positive")
         if status not in self.select_status:
             raise ValueError(f"status: {status}")
@@ -53,10 +53,10 @@ class cardmodel:
         now=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
         self.note_id=note_id
-        self.temp_ord=temp_ord
+        self.template_ord=template_ord
         self.card_id=card_id
         self.status=status
-        self.due=due if due is not None else now.date()
+        self.due=due if due is not None else datetime.now(timezone.utc).date()
         self.interval=interval
         self.ease=ease
         self.reps=reps
@@ -64,20 +64,20 @@ class cardmodel:
         self.created_at=created_at if created_at is not None else now
         self.updated_at=updated_at if updated_at is not None else now
         
-        def is_new(self):
-            return self.status=='new'
+    def is_new(self):
+        return self.status=='new'
         
-        def is_learning(self):
-            return self.status=='learning'
+    def is_learning(self):
+        return self.status=='learning'
         
-        def is_review(self):
-            return self.status=='review'
+    def is_review(self):
+        return self.status=='review'
         
-        def is_relearning(self):
-            return self.status=='relearning'
+    def is_relearning(self):
+        return self.status=='relearning'
         
-        def is_due(self):
-            return self.due is not None and self.due < datetime.now(timezone.utc)
+    def is_due(self):
+        return self.due is not None and self.due < datetime.now(timezone.utc).date()
         
-        def touch(self):
-            self.updated_at=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    def touch(self):
+        self.updated_at=datetime.now(timezone.utc).replace(microsecond=0).isoformat()

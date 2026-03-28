@@ -22,7 +22,7 @@ class Note:
     note_type_id:int
     fields:List[str]
     note_id:Optional[int]=None
-    tags:List[str]=field(default_factory=list)
+    tags:List=field(default_factory=list)
     sort_field:Optional[str]=None
     checksum:Optional[str]=None
     created_at:Optional[str]=None
@@ -31,7 +31,9 @@ class Note:
     def __post_init__(self):
         self.__validation_content(self.fields, "fields")
         self.__validate_note_type_id(self.note_type_id)
-        self.__validation_content(self.tags, "tags")
+        if not isinstance(self.tags, list):
+            raise ValueError("Tags must be a list")
+
         if self.note_id is not None:
             self.__validate_id(self.note_id)
 

@@ -8,7 +8,7 @@ class InMemoryRepository_card:
         return {
             "id": card.card_id,
             "note_id": card.note_id,
-            "temp_ord": card.temp_ord,
+            "template_ord": card.template_ord,
             "status": card.status,
             "due": card.due,
             "interval": card.interval,
@@ -22,7 +22,7 @@ class InMemoryRepository_card:
     def __deserialize_card(self,data:dict):
         return Card(
             note_id=data["note_id"],
-            temp_ord=data["temp_ord"],
+            template_ord=data["template_ord"],
             card_id=data["id"],
             status=data["status"],
             due=data["due"],
@@ -37,6 +37,9 @@ class InMemoryRepository_card:
     def add_card(self,card:Card):
         if card.card_id is not None:
             raise ValueError("Card id must be None")
+        for data in self.__cards.values():
+            if data["note_id"] == card.note_id and data["template_ord"] == card.template_ord:
+                raise ValueError("card with same note_id and template_ord already exists")
         card.card_id=self.__next_id
         self.__next_id+=1
         self.__cards[card.card_id]=self.__serialize_card(card)
@@ -53,6 +56,36 @@ class InMemoryRepository_card:
         for data in self.__cards.values():
             if data["note_id"]==note_id:
                 result.append(self.__deserialize_card(data))
+        result.sort(key=lambda card: card.template_ord)
         return result
 
+    def list_cards(self):
+        # when should we use list to protect orginal data?
+        return (self.__deserialize_card(data) for data in self.__cards.values())
+
+    def update_card(self,card:Card):
+        if card.card_id is None:
+            raise ValueError("Card id must be not None")
+        if card.card_id not in self.__cards:
+            raise ValueError("Card not found")
+        self.__cards[card.card_id]=self.__serialize_card(card)
+        return self.__deserialize_card(self.__cards[card.card_id])
     
+    def delete_card(self,card_id:int):
+        if card_id not in self.__cards:
+            raise ValueError("Card not found")
+        del self.__cards[card_id]
+        return True
+    
+    def clear_cards(self):
+        self.__cards.clear()
+        return True
+    
+    def count_cards(self):
+        return len(self.__cards)
+    
+    '''
+    get_card_by_note_and_ord(note_id, template_ord)
+    get_cards_by_state(state)
+    get_due_cards(today)
+    '''
