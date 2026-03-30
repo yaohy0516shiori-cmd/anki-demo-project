@@ -896,3 +896,29 @@ NoteType -> Service -> Repository -> Note
 - 查找待复习 card
 - 提交评分后更新 card 状态
 - 调用 scheduler 算法改 card
+
+
+
+# **2026-03-30**
+
+render——把card和note联系起来，生成用户看见的card
+
+review logger
+
+```
+
+self.status=status # new, learning, review, relearning 当每次调出review/learn的时候更新状态。
+new-good=learning
+new-again/unknow/forget=new
+learning*(how many times)=review
+review-good(how many times)=finish(常见调度算法有这个状态吗？complete)
+complete再次调度-again/unknow/forget=relearning
+relearning+good（*多少次）=complete（这个有必要和review区别吗）
+self.due=due if due is not None else datetime.now(timezone.utc).date() scheduler控制，但是记录在review里？还是直接从scheduler里调用？
+self.interval=interval scheduler控制，每天调用倒数-1
+self.ease=ease 放到schedule里方便算法判断，reviewlog再调用这个算法
+self.reps=reps review一次++
+self.lapses=lapses review/relearning错误一次++，用到scheduler里，错的次数越多后期调出越频繁？
+self.updated_at=updated_at if updated_at is not None else now  状态更新时间也要更新（只要碰到card就更新）
+```
+
