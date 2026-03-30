@@ -1,5 +1,5 @@
 from card.cardmodel import Card
-class InMemoryRepository_card:
+class InMemoryCardRepository:
     def __init__(self):
         self.__cards={}
         self.__next_id=1

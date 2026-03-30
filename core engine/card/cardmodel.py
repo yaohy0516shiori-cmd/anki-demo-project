@@ -1,22 +1,7 @@
 '''
 cardmodel is a class that represents a card in the game.
-it contains the following attributes:
-which notes is it from?
-Number of the card in the note
-status of the card (due, new, learning, etc.)
-when it should be reviewed next
-how many times it has been reviewed
-how many times it has been correct
-how many times it has been incorrect
-how many times it has been skipped
-how many times it has been suspended
-how many times it has been archived
-how many times it has been deleted
-how many times it has been restored
-how many times it has been exported
-how many times it has been imported
 '''
-from datetime import datetime,timezone 
+from datetime import datetime,timezone,date
 
 class Card:
     select_status={'new','learning','review','relearning'}
@@ -27,13 +12,13 @@ class Card:
         template_ord:int,
         card_id:int | None=None,
         status:str='new',
-        due: datetime | None=None,
+        due: date | None=None,
         interval: int=0,
         ease: float=2.5,
         reps: int=0,
         lapses: int=0,
-        created_at:datetime | None=None,
-        updated_at:datetime | None=None
+        created_at:str | None=None,
+        updated_at:str | None=None
         ):
         if note_id <=0:
             raise ValueError("Note id must be positive")
@@ -55,7 +40,7 @@ class Card:
         self.note_id=note_id
         self.template_ord=template_ord
         self.card_id=card_id
-        self.status=status
+        self.status=status # new, learning, review, relearning
         self.due=due if due is not None else datetime.now(timezone.utc).date()
         self.interval=interval
         self.ease=ease
@@ -77,7 +62,7 @@ class Card:
         return self.status=='relearning'
         
     def is_due(self):
-        return self.due is not None and self.due < datetime.now(timezone.utc).date()
+        return self.due is not None and self.due <= datetime.now(timezone.utc).date()
         
     def touch(self):
         self.updated_at=datetime.now(timezone.utc).replace(microsecond=0).isoformat()

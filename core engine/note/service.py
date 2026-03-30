@@ -5,12 +5,12 @@ Not responsible for the consistency of underlying objects, that part is entruste
 '''
 from note.notemodels import Note
 from note.utils import calculate_checksum
-from note.repository import InMemoryRepository_note
+from note.repository import InMemoryNoteRepository
 from note_type.notetype import NoteType
 from note_type.type_registry import get_note_type
 
 class NoteService:
-    def __init__(self, repository_note:InMemoryRepository_note):
+    def __init__(self, repository_note:InMemoryNoteRepository):
         self.__repository_note = repository_note
 
     def create_note(self, note_type, fields, tags=None,note_id=None):

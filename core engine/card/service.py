@@ -4,14 +4,16 @@ from card.cardmodel import Card
 from datetime import datetime, timezone
 from note_type.type_registry import get_note_type
 import re
+from card.repository import InMemoryCardRepository
 
 class CardService:
-    def __init__(self, card_repo):
+    def __init__(self, card_repo:InMemoryCardRepository):
         self.card_repo = card_repo
 
     def create_cards_from_note(self, note:Note):
+        if note.note_id is None:
+            raise ValueError("Note id is required")
         create_cards = []
-        note_type = get_note_type(note.note_type_id)
         today=datetime.now(timezone.utc).date()
         now=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
         for template_ord in self.__get_template_ords(note):
