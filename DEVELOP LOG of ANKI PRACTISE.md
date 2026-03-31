@@ -922,3 +922,62 @@ self.lapses=lapses review/relearning错误一次++，用到scheduler里，错的
 self.updated_at=updated_at if updated_at is not None else now  状态更新时间也要更新（只要碰到card就更新）
 ```
 
+# **2026-03-31**
+
+已完成：
+
+```
+`note_type/`：NoteType 和 registry
+`note/`：Note model + repo + service
+`card/`：Card model + repo + service
+`render/`：根据 note/card 渲染 front/back
+`scheduler/`：根据 rating 算下一状态
+`reviewlogger/`：写入复习日志
+```
+
+指定一条 note，生成 card——指定一张 card，render——指定一个 rating，更新它
+
+core engine未完成：
+
+今天该复习哪张？
+
+新卡、学习中卡、复习卡，谁先出？
+
+一次学习 session 怎么连续取下一张？
+
+deck 限额、每日新卡上限、复习上限怎么算？
+
+learning steps 是分钟级还是天级？
+
+sibling bury 怎么处理？
+
+用户看到的 Again / Hard / Good / Easy 四个按钮怎么映射？
+
+复习统计怎么从 revlog 汇总出来？
+
+new core engine index
+
+| 优先级 | 模块                                  | 当前状态              | 主要职责                                                     | 下一步动作                                                   |
+| ------ | ------------------------------------- | --------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| P0     | `note_type/`                          | 已完成基础版          | 定义 Basic / BasicReverse / Cloze 等 note type，决定 note 如何生成 card | 先不大改，只保持接口稳定                                     |
+| P0     | `note/`                               | 已完成基础版          | 管理 note 原始内容、字段校验、去重、CRUD                     | 后续只补和 deck / search 的关联字段                          |
+| P0     | `card/`                               | 已完成基础版          | 管理 card 实体、状态、间隔、ease、reps、lapses 等            | 后续补 `deck_id`，必要时把 `due` 升级为 `datetime`           |
+| P0     | `render/`                             | 已完成基础版          | 根据 `note + card.template_ord` 渲染真实 front/back          | 后续只补 cloze 边界情况                                      |
+| P0     | `scheduler/`                          | 已完成 v1             | 根据 rating 计算下一次状态、due、interval 等                 | 下一版扩成 `again/hard/good/easy`，补 learning steps         |
+| P0     | `revlog/`（你现在是 `reviewlogger/`） | 已完成基础版          | 记录每次复习前后变化                                         | 模块名建议统一成 `revlog/`                                   |
+| P1     | `study/` 或 `session/` **新增**       | 未开始                | 管理一次学习会话：取下一张卡、排序队列、提交评分、返回下一张 | 立刻开做。先实现 `get_next_card()` / `answer_card()` / `get_counts()` |
+| P1     | `deck/`                               | 未开始                | 管理牌组，卡片归属，支持按 deck 学习                         | 先做最小版：`Deck model + repo + service`，并给 `Card` 增加 `deck_id` |
+| P1     | `deckconfig/`                         | 未开始                | 管理学习步长、毕业间隔、每日新卡数、复习上限等               | 先做最小配置：`new_per_day`、`review_per_day`、`learning_steps`、`graduating_interval` |
+| P2     | `collection/`                         | 未开始                | 作为总入口，协调 note/card/deck/review/session 等模块        | 在 `study + deck + deckconfig` 稳定后再做 facade             |
+| P2     | `storage/`                            | 未开始                | 从 in-memory 迁到 SQLite，负责持久化                         | 等 session/deck 稳定后统一落库                               |
+| P2     | `stats/`                              | 未开始                | 基于 revlog 做学习统计、到期数量、复习量等                   | 先做最小版：今日复习数、again 次数、按天聚合                 |
+| P2     | `search/`                             | 未开始                | 按关键词、tag、deck、状态查 note/card                        | 先做 service 层筛选，不急着复杂查询语法                      |
+| P3     | `tags/`                               | 部分已有（note.tags） | 管理标签与筛选                                               | 暂时不单独建模块，先让 `search` 直接用 `note.tags`           |
+| P3     | `config/`                             | 未开始                | 全局系统配置                                                 | 后面和 deckconfig 区分开再做                                 |
+| P3     | `undo/`                               | 未开始                | 撤销操作                                                     | 等 collection / storage 稳定后再考虑                         |
+| P4     | `import_export/`                      | 未开始                | 导入导出学习内容                                             | 后面做文本导入即可                                           |
+| P4     | `media/`                              | 未开始                | 图片、音频、文件引用                                         | 等 card/render 稳后再扩                                      |
+| P4     | `browser_table/`                      | 未开始                | 为浏览器表格视图准备列数据                                   | 放后面                                                       |
+| P4     | `backend/`                            | 未开始                | 对外暴露统一 API                                             | 等 collection 成熟后再封装                                   |
+| P5     | `dbcheck/`                            | 未开始                | 数据一致性检查与修复                                         | SQLite 上线后再做                                            |
+| P5     | `sync/`                               | 未开始                | 云同步、账号、媒体同步                                       | 很后面再说                                                   |

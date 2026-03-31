@@ -1,6 +1,6 @@
 from datetime import datetime,timezone
-from utils import normalize_datetime_value
-class reviewlogger:
+from reviewlogger.utils import normalize_datetime_value
+class ReviewLog:
     '''
     record complete review process for a card
     which includes:
@@ -13,16 +13,16 @@ class reviewlogger:
         rating:str,
         old_status:str,
         new_status:str,
-        old_due:int,
-        new_due:int,
-        old_interval:int,
-        new_interval:int,
-        old_ease:float,
-        new_ease:float,
-        old_lapses:int,
-        new_lapses:int,
-        old_reps:int,
-        new_reps:int,
+        old_due:int | None=None,
+        new_due:int | None=None,
+        old_interval:int | None=None,
+        new_interval:int | None=None,
+        old_ease:float | None=None,
+        new_ease:float | None=None,
+        old_lapses:int|None=None,
+        new_lapses:int|None=None,
+        old_reps:int|None=None,
+        new_reps:int|None=None,
         log_id:int|None=None,
         review_time:str|None=None,
         ):
