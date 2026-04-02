@@ -29,7 +29,7 @@ class ReviewLoggerService:
         old_ease=card.ease
         old_lapses=card.lapses
         old_reps=card.reps
-        
+        old_step_index=card.step_index
         # scheduler calculates the next review time
         result = self.__scheduler.schedule(card,normalized_card)
 
@@ -40,6 +40,7 @@ class ReviewLoggerService:
         card.ease=result["ease"]
         card.lapses=result["lapses"]
         card.reps=result["reps"]
+        card.step_index=result["step_index"]
         # review time?
         card.touch()
 

@@ -23,6 +23,8 @@ class ReviewLoggerRepository:
             "new_lapses": log.new_lapses,
             "old_reps": log.old_reps,
             "new_reps": log.new_reps,
+            "old_step_index": log.old_step_index,
+            "new_step_index": log.new_step_index,
             "review_time": log.review_time,
         }
 
@@ -43,6 +45,8 @@ class ReviewLoggerRepository:
             new_lapses=data["new_lapses"],
             old_reps=data["old_reps"],
             new_reps=data["new_reps"],
+            old_step_index=data["old_step_index"],
+            new_step_index=data["new_step_index"],
             review_time=data["review_time"],
         )
     

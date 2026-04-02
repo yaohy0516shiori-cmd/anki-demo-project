@@ -23,6 +23,8 @@ class ReviewLog:
         new_lapses:int|None=None,
         old_reps:int|None=None,
         new_reps:int|None=None,
+        old_step_index:int|None=None,
+        new_step_index:int|None=None,
         log_id:int|None=None,
         review_time:str|None=None,
         ):
@@ -46,5 +48,7 @@ class ReviewLog:
         self.new_lapses=new_lapses
         self.old_reps=old_reps
         self.new_reps=new_reps
+        self.old_step_index=old_step_index
+        self.new_step_index=new_step_index
         self.log_id=log_id
         self.review_time=normalize_datetime_value(review_time) if review_time else now

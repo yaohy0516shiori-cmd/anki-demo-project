@@ -15,6 +15,7 @@ class InMemoryCardRepository:
             "ease": card.ease,
             "reps": card.reps,
             "lapses": card.lapses,
+            "step_index": card.step_index,
             "created_at": card.created_at,
             "updated_at": card.updated_at
         }
@@ -30,6 +31,7 @@ class InMemoryCardRepository:
             ease=data["ease"],
             reps=data["reps"],
             lapses=data["lapses"],
+            step_index=data["step_index"],
             created_at=data["created_at"],
             updated_at=data["updated_at"]
         )

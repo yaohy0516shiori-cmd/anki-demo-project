@@ -3,20 +3,31 @@ from card.cardmodel import Card
 
 class Scheduler_v1:
     """
-    A very small v1 scheduler.
+    Scheduler with same-day steps.
 
-    It only decides:
-    - next status
-    - next due date
-    - next interval
-    - next ease
-    - next reps
-    - next lapses
+    State meaning:
+    - new: never answered before
+    - learning: same-day learning flow
+    - review: graduated review flow
+    - relearning: failed review, same-day recovery flow
+
+    step_index meaning:
+    - None for new/review
+    - int >= 0 for learning/relearning
+
+    Default rule in this file:
+    - new -> learning(step_index=0) on first answer
+    - learning needs 4 successful goods to graduate to review
+    - review + again -> relearning(step_index=0)
+    - relearning needs 3 successful goods to return to review
 
     It does NOT save anything.
     It only returns the calculated result.
     """
     valid_ratings=["good","again"]
+    learning_steps=4
+    relearning_steps=3
+
     def __init__(self):
         pass
 
@@ -49,6 +60,7 @@ class Scheduler_v1:
                 "ease":card.ease,
                 "lapses":card.lapses,
                 "reps":card.reps+1,
+                "step_index":0,
             }
         elif rating=="again":
             return {
@@ -58,29 +70,44 @@ class Scheduler_v1:
                 "ease":card.ease,
                 "lapses":card.lapses,
                 "reps":card.reps+1,
+                "step_index":None, # 重复第一次展示（比如我后面每张复习卡可以设计不同的出卡方式？）
             }
     
     def __schedule_learning_card(self,card:Card,rating:str,today:date) -> dict:
         # learning + good  -> enter review
         # learning + again -> stay learning
-        if rating=="good":
+        if rating == "again":
             return {
-                "status":"review",
-                "due":today+timedelta(days=1),
-                "interval":1,
-                "ease":card.ease,
-                "lapses":card.lapses,
-                "reps":card.reps+1,
+                "status": "learning",
+                "due": today,
+                "interval": 0,
+                "ease": card.ease,
+                "lapses": card.lapses,
+                "reps": card.reps + 1,
+                "step_index": 0,
             }
-        elif rating=="again":
+
+        next_step = card.step_index + 1
+        if next_step >= self.LEARNING_REQUIRED_STEPS:
             return {
-                "status":"learning",
-                "due":today,
-                "interval":0,
-                "ease":card.ease,
-                "lapses":card.lapses,
-                "reps":card.reps+1,
+                "status": "review",
+                "due": today + timedelta(days=1),
+                "interval": 1,
+                "ease": card.ease,
+                "lapses": card.lapses,
+                "reps": card.reps + 1,
+                "step_index": None,
             }
+
+        return {
+            "status": "learning",
+            "due": today,
+            "interval": 0,
+            "ease": card.ease,
+            "lapses": card.lapses,
+            "reps": card.reps + 1,
+            "step_index": next_step,
+        }
 
     
     def __schedule_review_card(self,card:Card,rating:str,today:date) -> dict:
@@ -99,6 +126,7 @@ class Scheduler_v1:
                 "ease":card.ease,
                 "lapses":card.lapses,
                 "reps":card.reps+1,
+                "step_index":None,
             }
         # why? 依据是什么？cardmodel里默认值不是2.5吗？ 而且cardmodel为什么允许ease输入而不是直接给定初始值
         new_ease=max(1.3, round(card.ease-0.2,2)) 
@@ -110,27 +138,41 @@ class Scheduler_v1:
             "ease":new_ease,
             "lapses":card.lapses+1,
             "reps":card.reps+1,
+            "step_index":0,
         }
     
     def __schedule_relearning_card(self,card:Card,rating:str,today:date) -> dict:
         # relearning + good  -> enter review, reset interval
         # relearning + again -> stay relearning, count one lapse
-        if rating=="good":
+        if rating == "again":
             return {
-                "status":"review",
-                "due":today+timedelta(days=1),
-                "interval":1,
-                "ease":card.ease,
-                "lapses":card.lapses,
-                "reps":card.reps+1,
+                "status": "relearning",
+                "due": today,
+                "interval": 0,
+                "ease": card.ease,
+                "lapses": card.lapses,
+                "reps": card.reps + 1,
+                "step_index": 0,
             }
-        elif rating=="again":
+
+        next_step = card.step_index + 1
+        if next_step >= self.RELEARNING_REQUIRED_STEPS: # schedule里也没有循环啊？在哪里循环？
             return {
-                "status":"relearning",
-                "due":today,
-                "interval":0,
-                "ease":card.ease,
-                "lapses":card.lapses,
-                "reps":card.reps+1,
+                "status": "review",
+                "due": today + timedelta(days=1),
+                "interval": 1,
+                "ease": card.ease,
+                "lapses": card.lapses,
+                "reps": card.reps + 1,
+                "step_index": None,
             }
-    
+
+        return {
+            "status": "relearning",
+            "due": today,
+            "interval": 0,
+            "ease": card.ease,
+            "lapses": card.lapses,
+            "reps": card.reps + 1,
+            "step_index": next_step,
+        }

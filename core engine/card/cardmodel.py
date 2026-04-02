@@ -17,6 +17,7 @@ class Card:
         ease: float=2.5,
         reps: int=0,
         lapses: int=0,
+        step_index: int |None=None,
         created_at:str | None=None,
         updated_at:str | None=None
         ):
@@ -46,6 +47,7 @@ class Card:
         self.ease=ease
         self.reps=reps
         self.lapses=lapses
+        self.step_index=step_index
         self.created_at=created_at if created_at is not None else now
         self.updated_at=updated_at if updated_at is not None else now
         
