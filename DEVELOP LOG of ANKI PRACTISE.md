@@ -1015,3 +1015,319 @@ new core engine index
 | 第8周 | 打磨与包装 | README、架构图、demo script、resume bullet、性能/设计 trade-off 总结 | 可投递版本 |
 | ----- | ---------- | ------------------------------------------------------------ | ---------- |
 |       |            |                                                              |            |
+
+# **2026-04-02**
+
+## 1. Note 创建流程
+
+### 功能
+
+创建一条 note，并存入 note repository。
+ Create a note and save it into the note repository.
+
+### 调用链
+
+```
+外部调用
+→ NoteService.create_note()
+    → NoteService.__validate_fields()
+    → NoteService.is_duplicate()
+        → InMemoryNoteRepository.get_all_notes()
+        → calculate_checksum()
+    → Note(...)
+        → Note.__post_init__()
+            → __validation_content()
+            → __validate_note_type_id()
+            → calculate_checksum()
+    → InMemoryNoteRepository.add_note()
+        → __serialize_note()
+```
+
+- 检查字段数和类型
+- 检查是否重复
+- 构造 Note 对象
+- 生成 checksum / sort_field / 时间戳
+- 存到 repo
+
+------
+
+## 2. Note 更新流程
+
+### 功能
+
+更新已有 note 的 fields / tags。
+ Update the fields / tags of an existing note.
+
+### 调用链
+
+```
+外部调用
+→ NoteService.update_note(note_id, fields, tags)
+    → InMemoryNoteRepository.get_note()
+        → __deserialize_note()
+    → get_note_type(note.note_type_id)
+    → NoteService.__validate_fields()
+    → NoteService.is_duplicate()
+    → note.refresh()
+        → calculate_checksum()
+    → InMemoryNoteRepository.update_note()
+        → __serialize_note()
+```
+
+- 读取原 note
+- 按 note_type 再验证字段
+- 防止更新成重复内容
+- 重新计算 checksum / sort_field / updated_at
+- 存回 repo
+
+------
+
+## 3. 由 Note 生成 Card 的流程
+
+### 功能
+
+把 note 转成实际可复习的 cards。
+ Convert a note into actual review cards.
+
+### 调用链
+
+```
+外部调用
+→ CardService.create_cards_from_note(note)
+    → CardService.__get_template_ords(note)
+        → get_note_type(note.note_type_id)
+        → (如果 cloze) CardService.__get_cloze_ords(text)
+    → Card(...)
+    → InMemoryCardRepository.add_card()
+        → __serialize_card()
+```
+
+- 根据 note_type.kind 决定生成几张 card
+- basic → 1 张
+- basic_reverse → 2 张
+- cloze → 按 cloze ord 生成多张
+- 新生成 card 默认 `status='new'`，`due=today`
+
+------
+
+## 4. 渲染一张卡的流程
+
+### 功能
+
+把一张 card 真正变成 front/back。
+ Render one card into actual front/back content.
+
+### 调用链
+
+```
+外部调用
+→ render_card(card, note)
+    → get_note_type(note.note_type_id)
+    → 根据 kind 分发:
+        → __render_basic_card()
+        → __render_basic_reverse_card()
+        → __render_cloze_card()
+            → __replace_cloze()
+```
+
+- basic：前后字段直接映射
+- basic_reverse：根据 `template_ord` 交换 front/back
+- cloze：根据 `template_ord` 决定当前目标 cloze，并在前面隐藏、后面显示答案
+
+------
+
+## 5. 单张卡复习（review）流程
+
+### 功能
+
+用户对一张 card 评分，系统更新这张 card 的状态，并写入复习日志。
+ User rates a card, then the system updates the card state and writes a review log.
+
+### 调用链
+
+```
+外部调用
+→ ReviewLoggerService.review_card(card_id, rating)
+    → ReviewLoggerService.__normalize_rating(rating)
+    → InMemoryCardRepository.get_card(card_id)
+        → __deserialize_card()
+    → Scheduler_v1.schedule(card, normalized_rating)
+        → __schedule_new_card()
+        → __schedule_learning_card()
+        → __schedule_review_card()
+        → __schedule_relearning_card()
+    → 把 scheduler 返回结果写回 card
+    → card.touch()
+    → InMemoryCardRepository.update_card(card)
+        → __serialize_card()
+    → ReviewLog(...)
+    → ReviewLoggerRepository.add_log(log)
+        → __seralize_log()
+```
+
+- 读当前 card
+- 规范化 rating
+- 调 scheduler 计算下一状态
+- 更新 card 的：
+  - `status`
+  - `due`
+  - `interval`
+  - `ease`
+  - `reps`
+  - `lapses`
+  - `step_index`
+- 写一条 revlog
+
+------
+
+## 6. Study Session 流程
+
+#### 功能
+
+组织一轮今天的学习。
+ Organize one study session for today.
+
+------
+
+### 6.1 启动 session
+
+#### 调用链
+
+```
+外部调用
+→ StudyService.start_study_session(today)
+    → StudyService.__resolve_today()
+    → InMemoryCardRepository.list_cards()
+        → __deserialize_card() 逐张返回
+    → StudyService.__is_eligible(card)
+    → StudyService.__queue_sort_key(card)
+```
+
+- 设定今天日期
+- 扫描所有 cards
+- 筛选今天候选卡：
+  - `status` 在合法集合里
+  - `due <= today`
+- 按状态分到三个 session 队列：
+  - `learning_queue`
+  - `review_queue`
+  - `new_queue`
+
+------
+
+### 6.2 取下一张卡
+
+#### 调用链
+
+```
+外部调用
+→ StudyService.get_next_card()
+    → StudyService.__pop_next_card()
+    → InMemoryNoteRepository.get_note(card.note_id)
+        → __deserialize_note()
+    → render_card(card, note)
+```
+
+- 按优先级取下一张：
+  - learning/relearning
+  - review
+  - new
+- 找到对应 note
+- 调 render 生成 front/back
+- 返回给上层显示
+
+------
+
+### 6.3 回答当前卡
+
+#### 调用链
+
+```
+外部调用
+→ StudyService.answer_card(rating)
+    → ReviewLoggerService.review_card(current_card_id, rating)
+        → (整个 review 链)
+    → StudyService.__is_eligible(updated_card)
+    → StudyService.__enqueue_card(updated_card)
+```
+
+- 把评分动作交给 `ReviewLoggerService`
+- review service 更新完 card 后返回 `updated_card`
+- study service 决定：
+  - 如果更新后这张卡仍然 `due <= today`，重新入队
+  - 否则不再回今天队列
+
+也就是说：
+
+```
+## `study` 不决定状态规则
+
+## `scheduler` 决定状态规则
+
+## `study` 只根据 scheduler 的结果做“是否继续今天复习”的判断
+```
+
+## 四、按功能视角再梳理一次整体流程
+
+------
+
+### 功能 A：做卡（Create learning content）
+
+```
+NoteType
+定义模板规则
+↓
+NoteService.create_note()
+创建原始笔记
+↓
+CardService.create_cards_from_note()
+根据模板生成一张或多张 card
+```
+
+------
+
+### 功能 B：看卡（Render content）
+
+```
+card + note
+↓
+render.render_card()
+↓
+front/back
+```
+
+------
+
+### 功能 C：复习一张卡（Review one card）
+
+```
+ReviewLoggerService.review_card()
+↓
+Scheduler_v1.schedule()
+↓
+更新 card
+↓
+写 ReviewLog
+```
+
+------
+
+### 功能 D：组织一整轮今日学习（Study session）
+
+```
+StudyService.start_study_session()
+↓
+筛 today due cards，分队列
+↓
+StudyService.get_next_card()
+↓
+render 出下一张
+↓
+StudyService.answer_card()
+↓
+ReviewLoggerService.review_card()
+↓
+根据 updated_card 是否 due<=today 决定是否重新入队
+↓
+StudyService.is_finished()
+```

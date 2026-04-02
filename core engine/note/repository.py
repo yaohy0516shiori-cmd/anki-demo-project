@@ -6,6 +6,7 @@ class InMemoryNoteRepository:
         self.__notes={}
         self.__next_id=1
     def __serialize_note(self,note:Note):
+        # serialize the note to a dictionary
         return {
             "id": note.note_id,
             "note_type_id": note.note_type_id,
@@ -18,6 +19,7 @@ class InMemoryNoteRepository:
         }
     
     def __deserialize_note(self,data:dict):
+        # deserialize the note from a dictionary
         return Note(
             note_type_id=data["note_type_id"],
             fields=data["fields"],
@@ -29,6 +31,7 @@ class InMemoryNoteRepository:
             updated_at=data["updated_at"])
     
     def add_note(self,note:Note):
+        # add a note to the repository and assign a new id to the note
         # lose a part to judge whether the note is legal?
         if note.note_id is not None:
             raise ValueError("New Note's id should be None")
@@ -42,6 +45,7 @@ class InMemoryNoteRepository:
         return note.note_id
     
     def get_note(self,note_id:int):
+        # get a note from the repository by id
         if not isinstance(note_id,int):
             raise TypeError("Note id is not an integer")
         elif note_id not in self.__notes:
@@ -50,6 +54,7 @@ class InMemoryNoteRepository:
         return self.__deserialize_note(self.__notes[note_id])
     
     def update_note(self,note:Note):
+        # update a note in the repository
         # lose a part to judge whether the note is legal
         if not isinstance(note.note_id,int):
             raise TypeError("Note id is not an integer")
@@ -60,6 +65,7 @@ class InMemoryNoteRepository:
         return note.note_id
     
     def delete_note(self,note_id:int):
+        # delete a note from the repository
         if not isinstance(note_id,int):
             raise TypeError("Note id is not an integer")
         elif note_id not in self.__notes:
@@ -68,5 +74,6 @@ class InMemoryNoteRepository:
         return "Note deleted successfully"
     
     def get_all_notes(self):
+        # get all notes from the repository
         return [self.__deserialize_note(data) for data in self.__notes.values()]
     

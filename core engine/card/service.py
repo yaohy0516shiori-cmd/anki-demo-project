@@ -6,11 +6,13 @@ from note_type.type_registry import get_note_type
 import re
 from card.repository import InMemoryCardRepository
 
+# Generate cards from notes and provide card-level business interfaces.
 class CardService:
     def __init__(self, card_repo:InMemoryCardRepository):
         self.card_repo = card_repo
 
     def create_cards_from_note(self, note:Note):
+        # Decide how many cards to generate from a note and save them
         if note.note_id is None:
             raise ValueError("Note id is required")
         create_cards = []
@@ -27,12 +29,15 @@ class CardService:
         return create_cards
 
     def get_card(self, card_id):
+        # Read one card
         return self.card_repo.get_card(card_id)
 
     def get_card_by_note_id(self, note_id):
+        # Read all cards by note id
         return self.card_repo.get_card_by_note_id(note_id)
 
     def get_due_cards(self, today):
+        # Read all cards that are due today
         result=[]
         for card in self.card_repo.list_cards():
             if card.due is not None and card.due <= today:
@@ -40,9 +45,11 @@ class CardService:
         return result
 
     def update_card(self, card):
+        # Update a card
         return self.card_repo.update_card(card)
 
     def __get_cloze_ords(self, text):
+        # Extract cloze ordinals from cloze text
         # if catch the whole string, use re.findall(r"\{\{c\d+::.*?\}\}", text), no parentheses
         ord=set()
         matches=re.findall(r"\{\{c(\d+)::.*?\}\}", text)
@@ -51,6 +58,7 @@ class CardService:
         return sorted(ord)
 
     def __get_template_ords(self, note:Note):
+        # Decide which template ordinals should be generated
         note_type = get_note_type(note.note_type_id)
         if note_type.kind == "basic":
             return [0]

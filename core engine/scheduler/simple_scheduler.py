@@ -30,7 +30,8 @@ class Scheduler_v1:
 
     def __init__(self):
         pass
-
+    # Core scheduling algorithm. It only computes the next state and does not save
+    # Unified scheduling entry, dispatch by card.status
     def schedule(self,card:Card,rating:str) -> dict:
         if rating not in self.valid_ratings:
             raise ValueError(f"Invalid rating: {rating}")
@@ -47,7 +48,8 @@ class Scheduler_v1:
             return self.__schedule_relearning_card(card,rating,today)
         else:
             raise ValueError(f"Invalid card status: {card.status}")
-        
+    
+    # Compute next state for a new card
     def __schedule_new_card(self,card:Card,rating:str,today:date) -> dict:
         # first time exposur
         # good->learning
@@ -70,9 +72,10 @@ class Scheduler_v1:
                 "ease":card.ease,
                 "lapses":card.lapses,
                 "reps":card.reps+1,
-                "step_index":None, # 重复第一次展示（比如我后面每张复习卡可以设计不同的出卡方式？）
+                "step_index":0, # 重复第一次展示（比如我后面每张复习卡可以设计不同的出卡方式？）
             }
     
+    # Compute next state for a learning card
     def __schedule_learning_card(self,card:Card,rating:str,today:date) -> dict:
         # learning + good  -> enter review
         # learning + again -> stay learning
@@ -88,7 +91,7 @@ class Scheduler_v1:
             }
 
         next_step = card.step_index + 1
-        if next_step >= self.LEARNING_REQUIRED_STEPS:
+        if next_step >= self.learning_steps:
             return {
                 "status": "review",
                 "due": today + timedelta(days=1),
@@ -109,7 +112,7 @@ class Scheduler_v1:
             "step_index": next_step,
         }
 
-    
+    # Compute next state for a review card
     def __schedule_review_card(self,card:Card,rating:str,today:date) -> dict:
         # review + good  -> stay review, increase interval
         # review + again -> enter relearning, count one lapse
@@ -141,6 +144,7 @@ class Scheduler_v1:
             "step_index":0,
         }
     
+    # Compute next state for a relearning card
     def __schedule_relearning_card(self,card:Card,rating:str,today:date) -> dict:
         # relearning + good  -> enter review, reset interval
         # relearning + again -> stay relearning, count one lapse
@@ -156,7 +160,7 @@ class Scheduler_v1:
             }
 
         next_step = card.step_index + 1
-        if next_step >= self.RELEARNING_REQUIRED_STEPS: # schedule里也没有循环啊？在哪里循环？
+        if next_step >= self.relearning_steps: # schedule里也没有循环啊？在哪里循环？
             return {
                 "status": "review",
                 "due": today + timedelta(days=1),

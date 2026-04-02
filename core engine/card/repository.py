@@ -1,10 +1,13 @@
 from card.cardmodel import Card
+
+# Store cards in memory. will be replaced by database in the future
 class InMemoryCardRepository:
     def __init__(self):
         self.__cards={}
         self.__next_id=1
         
     def __serialize_card(self,card:Card):
+        # serialize the card to a dictionary
         return {
             "id": card.card_id,
             "note_id": card.note_id,
@@ -21,6 +24,7 @@ class InMemoryCardRepository:
         }
 
     def __deserialize_card(self,data:dict):
+        # deserialize the card from a dictionary
         return Card(
             note_id=data["note_id"],
             template_ord=data["template_ord"],
@@ -37,6 +41,7 @@ class InMemoryCardRepository:
         )
 
     def add_card(self,card:Card):
+        # add a card to the repository and assign a new id to the card
         if card.card_id is not None:
             raise ValueError("Card id must be None")
         for data in self.__cards.values():
@@ -48,12 +53,14 @@ class InMemoryCardRepository:
         return self.__deserialize_card(self.__cards[card.card_id])
 
     def get_card(self,card_id:int):
+        # get a card from the repository by id
         data=self.__cards.get(card_id)
         if data is None:
             return None
         return self.__deserialize_card(data)
 
     def get_card_by_note_id(self,note_id:int):
+        # get all cards from the repository by note id
         result=[]
         for data in self.__cards.values():
             if data["note_id"]==note_id:
@@ -62,10 +69,11 @@ class InMemoryCardRepository:
         return result
 
     def list_cards(self):
-        # when should we use list to protect orginal data?
+        # get all cards from the repository
         return (self.__deserialize_card(data) for data in self.__cards.values())
 
     def update_card(self,card:Card):
+        # update a card in the repository
         if card.card_id is None:
             raise ValueError("Card id must be not None")
         if card.card_id not in self.__cards:
@@ -74,16 +82,20 @@ class InMemoryCardRepository:
         return self.__deserialize_card(self.__cards[card.card_id])
     
     def delete_card(self,card_id:int):
+        # delete a card from the repository
         if card_id not in self.__cards:
             raise ValueError("Card not found")
         del self.__cards[card_id]
         return True
     
     def clear_cards(self):
+        # clear all cards from the repository
+        # safety check
         self.__cards.clear()
         return True
     
     def count_cards(self):
+        # count the number of cards in the repository
         return len(self.__cards)
     
     '''

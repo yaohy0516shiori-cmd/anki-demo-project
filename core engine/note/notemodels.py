@@ -18,7 +18,21 @@ from note.utils import calculate_checksum
 
 @dataclass
 class Note:
-    # dataclass will generate __init__ method, so we don't need to define it
+    '''
+    Args:
+        note_type_id: The id of the note type
+        fields: The fields of the note
+        note_id: The id of the note
+        tags: The tags of the note
+        sort_field: The sort field of the note
+        checksum: The checksum of the note
+        created_at: The created time of the note
+        updated_at: The updated time of the note
+    Returns:
+        A Note object
+
+    dataclass will generate __init__ method, so we don't need to define it
+    '''
     note_type_id:int
     fields:List[str]
     note_id:Optional[int]=None
@@ -29,6 +43,7 @@ class Note:
     updated_at:Optional[str]=None
 
     def __post_init__(self):
+        # Validate fields, generate checksum, set timestamps after init
         self.__validation_content(self.fields, "fields")
         self.__validate_note_type_id(self.note_type_id)
         if not isinstance(self.tags, list):
@@ -62,20 +77,24 @@ class Note:
     
     @staticmethod
     def __validate_id(note_id:int):
+        # validate the id of the note
         if not isinstance(note_id, int) or note_id <= 0:
             raise ValueError("Note id is not an integer or is not positive")
         return True
 
     @staticmethod
     def __validate_note_type_id(note_type_id:int):
+        # validate the id of the note type
         if not isinstance(note_type_id, int) or note_type_id <= 0:
             raise ValueError("Note type id is not an integer or is not positive")
         return True
 
     def refresh(self):
+        # Refresh checksum, sort_field, updated_at
         self.updated_at=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
         self.checksum=calculate_checksum(self.fields)
         self.sort_field=self.fields[0].strip() if self.fields else ""
+        
     # don't need to define __repr__ method, dataclass will generate it
     # def __repr__(self):
     #     return f"Note(id={self.note_id}, note_type_id={self.note_type_id}, fields={self.fields}, 

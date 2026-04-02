@@ -14,6 +14,7 @@ class NoteService:
         self.__repository_note = repository_note
 
     def create_note(self, note_type, fields, tags=None,note_id=None):
+        # create a note: validate, deduplicate, construct Note, save to repo
         tags=tags if tags is not None else []
         self.__validate_fields(note_type, fields)
         if self.is_duplicate(fields,note_type.note_type_id,note_id):
@@ -23,12 +24,15 @@ class NoteService:
 
 
     def get_note(self, note_id):
+        # get a note from the repository by id
         return self.__repository_note.get_note(note_id)
 
     def list_notes(self):
+        # get all notes from the repository
         return self.__repository_note.get_all_notes()
 
     def update_note(self, note_id, fields=None, tags=None):
+        # update a note in the repository, fields/tags, refresh, then save to repo
         note = self.__repository_note.get_note(note_id)
         note_type=get_note_type(note.note_type_id)
         new_fields=note.fields if fields is None else fields
@@ -42,9 +46,11 @@ class NoteService:
         return self.__repository_note.update_note(note)
 
     def delete_note(self, note_id):
+        # delete a note from the repository
         return self.__repository_note.delete_note(note_id)
 
     def is_duplicate(self, fields, note_type_id, exclude_note_id=None):
+        # check if the note is duplicate
         tempchecksum=calculate_checksum(fields)
         notes=self.__repository_note.get_all_notes()
         for note in notes:
@@ -55,6 +61,7 @@ class NoteService:
         return False
 
     def __validate_fields(self, note_type:NoteType, fields):
+        # validate the fields of the note
         if len(fields) != len(note_type.field_names):   
             raise ValueError("The number of fields is not equal to the number of field names")
         if not isinstance(fields, list) or not all(isinstance(field, str) for field in fields):

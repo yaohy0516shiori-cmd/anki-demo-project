@@ -7,8 +7,11 @@ from reviewlogger.service import ReviewLoggerService
 from render.card_render import render_card
 from note.repository import InMemoryNoteRepository
 
+# Study session coordinator.
 class StudyService:
     VALID_STATUSES={"new","learning","relearning","review"}
+
+    # Inject repositories/services and initialize three queues
     def __init__(
         self,
         card_repo:InMemoryCardRepository,
@@ -23,11 +26,10 @@ class StudyService:
         self.__new_queue=deque()
         self.__current_card_id=None
         self.__today=None
-        self.__is_active=False
 
+    # Start a study session, filter today's eligible cards, and distribute them into queues
     def start_study_session(self,today:date | None=None):
         self.__today=self.__resolve_today(today)
-        self.__is_active=True
         self.__current_card_id=None
         self.__learning_queue.clear()
         self.__review_queue.clear()
@@ -47,26 +49,26 @@ class StudyService:
             elif card.status == "review":
                 review_cards.append(card)
             
-            learning_cards.sort(key=self.__queue_sort_key)
-            review_cards.sort(key=self.__queue_sort_key)
-            new_cards.sort(key=self.__queue_sort_key)
+        learning_cards.sort(key=self.__queue_sort_key)
+        review_cards.sort(key=self.__queue_sort_key)
+        new_cards.sort(key=self.__queue_sort_key)
 
-            self.__learning_queue=deque(learning_cards)
-            self.__review_queue=deque(review_cards)
-            self.__new_queue=deque(new_cards)
+        self.__learning_queue=deque(learning_cards)
+        self.__review_queue=deque(review_cards)
+        self.__new_queue=deque(new_cards)
 
-
+    # Resolve today's date, use today if provided, otherwise use current UTC date
     def __resolve_today(self,today:date | None=None):
         return today if today is not None else datetime.now(timezone.utc).date()
 
+    # Pop the next card from session queues and render front/back
     def get_next_card(self):
-        if not self.__is_active:
-            raise ValueError("Study session is not active")
-        if self.__current_card_id is None:
+        if self.__current_card_id is not None:
             raise ValueError("Current card has not been answered yet")
 
         card=self.__pop_next_card()
         if card is None:
+            self.__is_active=False
             return None
         self.__current_card_id=card.card_id
         note=self.__note_repo.get_note(card.note_id)
@@ -83,9 +85,8 @@ class StudyService:
             "step_index":card.step_index,
         }
     
-    def answer_card(self,rating:str):
-        if not self.__is_active:
-            raise ValueError("Study session is not active")
+    # Submit rating for current card, call review service, and re-enqueue if needed
+    def answer_current_card(self,rating:str):
         if self.__current_card_id is None:
             raise ValueError("Current card has not been answered yet")
         result=self.__review_service.review_card(self.__current_card_id,rating)
@@ -95,17 +96,18 @@ class StudyService:
             self.__enqueue_card(updated_card)
         
         self.__current_card_id=None
+
         return result
 
+    # Check if the study session is finished
     def is_finished(self)->bool:
-        if not self.__is_active:
-            return True
         return (len(self.__learning_queue) == 0 
-        and len(self.__review_queue) == 0 
-        and len(self.__new_queue) == 0
-        and self.__current_card_id is None
-        )
+            and len(self.__review_queue) == 0 
+            and len(self.__new_queue) == 0
+            and self.__current_card_id is None
+            )
 
+    # Pop the next card from the session queues
     def __pop_next_card(self):
         if len(self.__learning_queue) > 0:
             return self.__learning_queue.popleft()
@@ -115,9 +117,11 @@ class StudyService:
             return self.__new_queue.popleft()
         return None
 
+    # Check if a card is eligible for the study session
     def __is_eligible(self,card:Card)->bool:
         return (card.status in self.VALID_STATUSES and card.due is not None and card.due <= self.__today)
 
+    # Enqueue a card into the appropriate queue
     def __enqueue_card(self,card:Card):
         if card.status == "new":
             self.__new_queue.append(card)
@@ -126,5 +130,6 @@ class StudyService:
         elif card.status == "review":
             self.__review_queue.append(card)
 
+    # Sort key for card queues
     def __queue_sort_key(self,card:Card):
         return (card.due,card.note_id,card.template_ord)

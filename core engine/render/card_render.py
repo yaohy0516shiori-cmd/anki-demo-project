@@ -16,7 +16,8 @@ question: how to use ai-agent to help user to split a long text into multiple cl
 # Group 3 -> optional hint, e.g. "city"
 CLOZE_PATTERN = re.compile(r"\{\{c(\d+)::(.*?)(?:::(.*?))?\}\}")
 
-
+# Unified rendering entry point that decides how to render a card based on note type.
+# Dispatch to different rendering logic based on note type
 def render_card(card: Card, note: Note) -> dict:
     """
     Render one real study card from one note.
@@ -73,7 +74,7 @@ def render_card(card: Card, note: Note) -> dict:
 
     raise ValueError(f"Unsupported note type: {note_type.kind}")
 
-
+# Render a basic card
 def __render_basic_card(note: Note) -> dict:
     """
     Render a normal basic card.
@@ -85,7 +86,7 @@ def __render_basic_card(note: Note) -> dict:
         "back": note.fields[1]
     }
 
-
+# Render a basic reverse card
 def __render_basic_reverse_card(note: Note, template_ord: int) -> dict:
     """
     Render a reversed basic card.
@@ -113,7 +114,7 @@ def __render_basic_reverse_card(note: Note, template_ord: int) -> dict:
     # Anything else is invalid for basic_reverse.
     raise ValueError(f"Invalid template ord: {template_ord}")
 
-
+# Render a cloze card
 def __render_cloze_card(note: Note, template_ord: int) -> dict:
     """
     Render one cloze card from a cloze note.
@@ -154,7 +155,7 @@ def __render_cloze_card(note: Note, template_ord: int) -> dict:
         "back": back
     }
 
-
+# Replace cloze markup inside the text
 def __replace_cloze(text: str, target_ord: int, hide_target: bool) -> str:
     """
     Replace cloze markup inside the text.

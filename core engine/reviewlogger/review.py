@@ -7,6 +7,8 @@ class ReviewLog:
     card/rating/what change after review
     '''
     view_rating=['good','again']
+
+    # Construct one review log with old/new state and scheduling fields
     def __init__(
         self,
         card_id:int,
