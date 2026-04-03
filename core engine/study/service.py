@@ -68,7 +68,6 @@ class StudyService:
 
         card=self.__pop_next_card()
         if card is None:
-            self.__is_active=False
             return None
         self.__current_card_id=card.card_id
         note=self.__note_repo.get_note(card.note_id)
@@ -80,16 +79,19 @@ class StudyService:
             "card":card,
             "note":note,
             "front":rendered["front"],
-            "back":rendered["back"],
             "status":card.status,
             "step_index":card.step_index,
         }
     
     # Submit rating for current card, call review service, and re-enqueue if needed
-    def answer_current_card(self,rating:str):
+    def rate_current_card(self,rating:str):
         if self.__current_card_id is None:
-            raise ValueError("Current card has not been answered yet")
-        result=self.__review_service.review_card(self.__current_card_id,rating)
+            raise ValueError("No current card to answer")
+        result=self.__review_service.review_card(
+            self.__current_card_id,
+            rating,
+            today=self.__today)
+
         updated_card=result["card"]
 
         if self.__is_eligible(updated_card):
@@ -99,6 +101,19 @@ class StudyService:
 
         return result
 
+    def reveal_back_of_current_card(self):
+        if self.__current_card_id is None:
+            raise ValueError("No card to reveal")
+        card=self.__card_repo.get_card(self.__current_card_id)
+        if card is None:
+            raise ValueError("Card not found")
+
+        note=self.__note_repo.get_note(card.note_id)
+        if note is None:
+            raise ValueError("Note not found")
+
+        return render_card(card,note)["back"]
+    
     # Check if the study session is finished
     def is_finished(self)->bool:
         return (len(self.__learning_queue) == 0 

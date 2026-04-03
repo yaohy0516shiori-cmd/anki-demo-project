@@ -1332,7 +1332,9 @@ ReviewLoggerService.review_card()
 StudyService.is_finished()
 ```
 
-## 1. `StudyService` 的职责边界
+## Q&A
+
+### 1. `StudyService` 的职责边界
 
 - `start_study_session()`：只负责初始化 session，把 `due <= today` 的卡按状态分进队列。
 - `get_next_card()`：只负责从队列取当前一张卡，并 render。
@@ -1341,7 +1343,7 @@ StudyService.is_finished()
 
 ------
 
-## 2. `start / get / answer` 是怎么串起来的
+### 2. `start / get / answer` 是怎么串起来的
 
 - 不是函数直接互调串起来。
 - 是通过实例属性串起来：
@@ -1353,7 +1355,7 @@ StudyService.is_finished()
 
 ------
 
-## 3. `current_card_id` 的含义
+### 3. `current_card_id` 的含义
 
 - 表示：**当前已经发给用户、但还没完成这次答题处理的那张卡**
 - 不是队列里的卡。
@@ -1362,7 +1364,7 @@ StudyService.is_finished()
 
 ------
 
-## 4. `is_finished()` 为什么还要判断 `current_card_id is None`
+### 4. `is_finished()` 为什么还要判断 `current_card_id is None`
 
 - 因为会出现：
   - 三个队列都空了
@@ -1373,7 +1375,7 @@ StudyService.is_finished()
 
 ------
 
-## 5. `is_active` 是否有必要
+### 5. `is_active` 是否有必要
 
 - 当前版本里基本是冗余的。
 - 因为 session 状态已经能由：
@@ -1386,7 +1388,7 @@ StudyService.is_finished()
 
 ------
 
-## 6. `step_index` 从哪里来
+### 6. `step_index` 从哪里来
 
 - 不是外部手动输入。
 - 初始值来自 `Card` 默认值：
@@ -1397,7 +1399,7 @@ StudyService.is_finished()
 
 ------
 
-## 7. `step_index` 怎么和 review / scheduler 串起来
+### 7. `step_index` 怎么和 review / scheduler 串起来
 
 链路是：
 
@@ -1415,7 +1417,7 @@ StudyService.is_finished()
 
 ------
 
-## 8. scheduler 返回 dict，在哪里变成实例属性并保存
+### 8. scheduler 返回 dict，在哪里变成实例属性并保存
 
 在`reviewlogger/service.py -> review_card()`
 
@@ -1439,10 +1441,223 @@ StudyService.is_finished()
 
 ------
 
-## 9. `step_index` 要不要记进 `ReviewLog`
+### 9. `step_index` 要不要记进 `ReviewLog`
 
 - 运行上不是必须
 - 但调试、追踪状态变化很有用
 - 建议记：
   - `old_step_index`
   - `new_step_index`
+
+# **2026-04-03**
+
+## 1. basic / basic_reverse / cloze 到底怎么生成 card
+
+**问题：** `basic` 是一张卡还是两张？`basic_reverse` 和 `basic` 区别在哪？
+
+**结论：**
+
+- `basic`：**1 note -> 1 card**，这张 card 有 `front/back` 两面。
+- `basic_reverse`：**1 note -> 2 cards**，分别是正向卡和反向卡。
+- `cloze`：**1 note -> 多张 cards**，按 `c1/c2/c3...` 的 ord 生成。
+- 区别不在 fields 长相，`basic` 和 `basic_reverse` 都可以是 `[front, back]`，区别在 **note type 决定生成几个 template ord**。
+
+------
+
+## 2. card_id 和 template_ord 分别是干什么的
+
+**问题：** 既然有 `template_ord`，为什么还要 `card_id`？正反卡能不能共用一个 card_id？
+
+**结论：**
+
+- `card_id`：这张 card 自己的唯一身份。
+- `template_ord`：这张 card 在所属 note 里的“位置/角色”。
+- `note_id + template_ord` 可以定位“这是哪一张派生卡”，但不能替代 `card_id` 作为独立实体主键。
+- 正反向卡不能共用一个 `card_id`，因为它们是两张**独立调度对象**，`due/ease/reps/lapses` 可以不同。
+
+------
+
+## 3. 现在有没有做句子切分
+
+**问题：** 长句是不是会自动拆开做卡？
+
+**结论：**
+
+- **没有做句子切分。**
+- `basic/basic_reverse`：整段字段内容直接做卡，不会按标点拆。
+- `cloze`：只是扫描 `{{c1::...}}` 这种标记生成 ord，不是切句。
+- 句子切分属于**制卡前预处理**，不是 scheduler / render 的职责。
+
+------
+
+## 4. `reconcile_cards_for_note()` 的作用
+
+**问题：** 这个方法到底干什么？为什么不能只 delete？
+
+**结论：**
+ `reconcile_cards_for_note(note)` 的作用是：
+
+**让“当前 note 应该拥有的 card 集合”和“仓库里实际存在的 card 集合”保持一致。**
+
+它做三件事：
+
+- 不该存在的 card -> 删掉
+- 缺失的 card -> 补上
+- 仍然有效的旧 card -> 保留原来的调度数据
+
+为什么不能只 delete：
+
+- update note 时，不只是“删旧卡”，还有“保留旧卡”和“新增新卡”。
+- 如果你“全删再重建”，旧卡原来的复习进度会丢掉。
+
+所以：
+
+- **create/update note**：用 `reconcile`
+- **delete note**：按 `note_id` 级联删整组 cards
+
+------
+
+## 5. reviewer 流程顺序到底是什么
+
+**问题：** 是 `get -> answer -> reveal` 还是别的？
+
+**结论：**
+ 正确流程是：
+
+**`get_next_card() -> reveal_back_of_current_card() -> rate_current_card()`**
+
+不是 `get -> answer -> reveal`。
+
+原因：
+
+- `answer_current_card()` 现在的真实语义不是“作答内容”，而是“提交评分”
+- 一旦评分结束，这张 card 本轮就结束了，`current_card_id` 应该清空
+- 所以 reveal 必须发生在 rate 之前
+
+------
+
+## 6. `answer_current_card()` 这个名字是否准确
+
+**问题：** 这里的 answer 根本不是“回答”吧？
+
+**结论：**
+ 对，它现在不是“回答内容”，而是“评分”。
+
+更准确的名字应该是：
+
+- `rate_current_card()`
+- 或 `submit_rating()`
+
+当前这个函数做的其实是：
+
+- 根据 rating 调 scheduler
+- 更新 card
+- 写 review log
+- 必要时重新入队
+
+它没有处理“用户输入答案文本”。
+
+------
+
+## 7. 现在要不要做“用户输入答案 + 自动判对错”
+
+**问题：** 现在要不要补 typed answer，后面用正则判断对错？
+
+**结论：**
+ **现在不建议做。**
+
+当前阶段先把主线做稳：
+
+- 出题
+- reveal
+- rating
+- scheduler
+- requeue
+- revlog
+
+原因：
+
+- SRS 核心依赖的是 **rating**，不是自由文本答案
+- 正则判对错只适合很窄的题型
+- 自动判题会把 reviewer 层和 scheduler 层搅乱
+
+后面如果做 typed answer，更适合作为**可选增强**：
+
+- 用户输入答案
+- 系统做辅助比对
+- 最终 rating 仍然由用户自己选
+
+------
+
+## 8. `today` 为什么要一路传下去
+
+**问题：** `reviewlogger/service.py` 里调 scheduler 为什么要传 `today`？不传或写 `None` 行不行？
+
+**结论：**
+
+- 技术上：不传也能跑，scheduler 可以回退到系统当天
+- 设计上：既然 `StudyService.start_study_session(today=...)` 已经引入 session date，就应该一路传到底
+
+这样才能保证：
+
+- session 里判断 eligibility 用的是同一个 today
+- scheduler 更新 due 也用同一个 today
+
+否则测试和复现会乱。
+
+------
+
+## 9. 今天补的测试重点
+
+**问题：** 当前阶段该测什么？
+
+**结论：**
+ 今天明确了要补这类测试：
+
+### Study 连续学习流
+
+- 能出卡
+- 能评分
+- 评分后同一天重新入队
+- 连续学习直到 graduate 后不再入队
+
+### 典型场景
+
+- `new + again`：今天重入队
+- `new + 连续 good`：从 `learning` 学到 `review`
+- `review + again`：进入 `relearning` 并重入队
+
+这些测试能证明：
+
+- study session
+- scheduler
+- requeue
+- revlog
+
+这条核心闭环已经通了。
+
+------
+
+## 10. 当前阶段最该继续做什么
+
+**问题：** 这阶段后面优先级是什么？
+
+**当前阶段主测试不该围绕“用户输入接口”，而该围绕“study service 接口”。**
+ 用户输入接口可以加，但应该作为一层很薄的 adapter，单独测，不要和 engine 测试绑死。
+
+**简短回顾：**你说的“用户输入接口”更适合交互层测试；当前 core engine 阶段应优先直接测试 `get / reveal / rate` 这些 service 接口，把调度与重入队逻辑先测稳，再在外层补输入映射测试。
+
+**结论：**
+ 先做这几个：
+
+1. 修 `reconcile` / `delete_card` / 方法名不统一 这些 bug
+2. 把 `get -> reveal -> rate` reviewer 流程整理干净
+3. 补连续学习与 requeue 测试
+4. 补 `basic_reverse` 和 cloze ord 增减测试
+5. 保持 note-card 生命周期自动同步
+
+暂时先不做：
+
+- typed answer 自动判题
+- deck / SQLite / API / 前端
+- 更完整的 FSRS / daily limits

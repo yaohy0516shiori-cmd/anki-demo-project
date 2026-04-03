@@ -27,7 +27,7 @@ class NoteService:
         saved_note = self.__repository_note.get_note(saved_note_id)
 
         if self.__card_service is not None:
-            self.__card_service.reconcile_cards(saved_note)
+            self.__card_service.reconcile_cards_for_note(saved_note)
 
         return saved_note_id
 

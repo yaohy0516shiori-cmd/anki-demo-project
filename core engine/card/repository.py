@@ -112,6 +112,9 @@ class InMemoryCardRepository:
         # delete a card from the repository by card id
         if card_id not in self.__cards:
             raise ValueError("Card not found")
+        del self.__cards[card_id]
+        return True
+    
     def clear_cards(self):
         # clear all cards from the repository
         # safety check

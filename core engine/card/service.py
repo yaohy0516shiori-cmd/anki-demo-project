@@ -57,7 +57,7 @@ class CardService:
         # delete all cards generated from a note
         return self.card_repo.delete_cards_by_note_id(note_id)
     
-    def reconcile_cards(self, note:Note):
+    def reconcile_cards_for_note(self, note:Note):
         # synchronize existing cards with current note fields
         if note.note_id is None:
             raise ValueError("Note id is required")
@@ -75,7 +75,7 @@ class CardService:
         now=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
         for template_ord in expected_template_ords:
-            if template_ord not in existing_by_ord:
+            if template_ord in existing_by_ord:
                 continue
             card=Card(
                 note_id=note.note_id,
