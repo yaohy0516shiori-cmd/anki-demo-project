@@ -1,4 +1,4 @@
-from datetime import datetime,timezone
+from datetime import datetime,timezone,date
 from reviewlogger.utils import normalize_datetime_value
 class ReviewLog:
     '''
@@ -15,8 +15,8 @@ class ReviewLog:
         rating:str,
         old_status:str,
         new_status:str,
-        old_due:int | None=None,
-        new_due:int | None=None,
+        old_due:date | None=None,
+        new_due:date | None=None,
         old_interval:int | None=None,
         new_interval:int | None=None,
         old_ease:float | None=None,

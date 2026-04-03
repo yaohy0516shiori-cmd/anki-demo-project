@@ -1331,3 +1331,118 @@ ReviewLoggerService.review_card()
 ↓
 StudyService.is_finished()
 ```
+
+## 1. `StudyService` 的职责边界
+
+- `start_study_session()`：只负责初始化 session，把 `due <= today` 的卡按状态分进队列。
+- `get_next_card()`：只负责从队列取当前一张卡，并 render。
+- `answer_current_card()`：只负责提交“当前这张卡”的评分，调用 `review_service` 更新 card，再决定是否重新入队。
+- 它不是一口气跑完整轮学习的 driver，而是一个 **session 状态机接口**。
+
+------
+
+## 2. `start / get / answer` 是怎么串起来的
+
+- 不是函数直接互调串起来。
+- 是通过实例属性串起来：
+  - `__today`
+  - `__learning_queue / __review_queue / __new_queue`
+  - `__current_card_id`
+- 外部主循环才是完整 session：
+  - `start -> get_next_card -> answer_current_card -> get_next_card -> ...`
+
+------
+
+## 3. `current_card_id` 的含义
+
+- 表示：**当前已经发给用户、但还没完成这次答题处理的那张卡**
+- 不是队列里的卡。
+- 所以答完后应设回 `None`，因为“当前处理结束了”。
+- 如果这张卡今天还要继续学，它会重新入队，等下次再被取出。
+
+------
+
+## 4. `is_finished()` 为什么还要判断 `current_card_id is None`
+
+- 因为会出现：
+  - 三个队列都空了
+  - 但最后一张卡刚被 `pop` 出来，还没提交评分
+- 所以结束条件必须是：
+  - 队列全空
+  - 且没有 in-progress 的当前卡
+
+------
+
+## 5. `is_active` 是否有必要
+
+- 当前版本里基本是冗余的。
+- 因为 session 状态已经能由：
+  - `__today`
+  - 三个队列
+  - `__current_card_id`
+  - `is_finished()`
+     这些表达清楚。
+- 建议删掉，避免和 `is_finished()` 互相打架。
+
+------
+
+## 6. `step_index` 从哪里来
+
+- 不是外部手动输入。
+- 初始值来自 `Card` 默认值：
+  - `new/review` 初始一般是 `step_index = None`
+- 第一次进入 `learning/relearning` 时，由 `scheduler` 返回：
+  - `step_index = 0`
+- 后续每次答题，再从 `card.step_index` 继续推进。
+
+------
+
+## 7. `step_index` 怎么和 review / scheduler 串起来
+
+链路是：
+
+- `card_repo.get_card(card_id)` 取出 card（里面带旧 `step_index`）
+- `scheduler.schedule(card, rating)` 读取 `card.step_index`
+- scheduler 返回新的 `step_index`
+- `reviewlogger/service.py` 里：
+  - `card.step_index = result["step_index"]`
+  - `card_repo.update_card(card)` 持久化
+
+也就是说：
+
+- `step_index` 是 **Card 的持久化状态**
+- 不是临时参数
+
+------
+
+## 8. scheduler 返回 dict，在哪里变成实例属性并保存
+
+在`reviewlogger/service.py -> review_card()`
+
+这里做了两步：
+
+1. 手动写回 `card`：
+
+- `card.status = result["status"]`
+- `card.due = result["due"]`
+- ...
+- `card.step_index = result["step_index"]`
+
+1. 再持久化：
+
+- `self.__card_repo.update_card(card)`
+
+所以：
+
+- `scheduler` 只负责算 dict
+- `review_service` 负责把 dict 落到 card 并存回 repo
+
+------
+
+## 9. `step_index` 要不要记进 `ReviewLog`
+
+- 运行上不是必须
+- 但调试、追踪状态变化很有用
+- 建议记：
+  - `old_step_index`
+  - `new_step_index`

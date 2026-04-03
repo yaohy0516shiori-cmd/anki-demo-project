@@ -3,6 +3,7 @@ from card.repository import InMemoryCardRepository as card_repo
 from scheduler.simple_scheduler import Scheduler_v1 as scheduler
 from reviewlogger.review import ReviewLog
 
+
 class ReviewLoggerService:
     '''
     handle review logger related operations
@@ -17,7 +18,7 @@ class ReviewLoggerService:
         self.__scheduler=scheduler
 
     # Read card → normalize rating → call scheduler → update card → write revlog
-    def review_card(self, card_id: int, rating:str):
+    def review_card(self, card_id: int, rating:str,today=None):
         normalized_card=self.__normalize_rating(rating)
         card=self.__card_repo.get_card(card_id)
         if card is None:
@@ -32,7 +33,7 @@ class ReviewLoggerService:
         old_reps=card.reps
         old_step_index=card.step_index
         # scheduler calculates the next review time
-        result = self.__scheduler.schedule(card,normalized_card)
+        result = self.__scheduler.schedule(card,normalized_card,today=today)
 
         # apply scheduler result to card
         card.status=result["status"]

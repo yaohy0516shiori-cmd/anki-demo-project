@@ -32,11 +32,11 @@ class Scheduler_v1:
         pass
     # Core scheduling algorithm. It only computes the next state and does not save
     # Unified scheduling entry, dispatch by card.status
-    def schedule(self,card:Card,rating:str) -> dict:
+    def schedule(self,card:Card,rating:str,today:date | None=None) -> dict:
         if rating not in self.valid_ratings:
             raise ValueError(f"Invalid rating: {rating}")
         
-        today=datetime.now(timezone.utc).date()
+        today=today if today is not None else datetime.now(timezone.utc).date()
 
         if card.status=="new":
             return self.__schedule_new_card(card,rating,today)
@@ -72,7 +72,7 @@ class Scheduler_v1:
                 "ease":card.ease,
                 "lapses":card.lapses,
                 "reps":card.reps+1,
-                "step_index":0, # 重复第一次展示（比如我后面每张复习卡可以设计不同的出卡方式？）
+                "step_index":None, # 重复第一次展示（比如我后面每张复习卡可以设计不同的出卡方式？）
             }
     
     # Compute next state for a learning card
@@ -90,7 +90,9 @@ class Scheduler_v1:
                 "step_index": 0,
             }
 
-        next_step = card.step_index + 1
+        current_step = card.step_index if card.step_index is not None else 0
+        next_step = current_step + 1
+
         if next_step >= self.learning_steps:
             return {
                 "status": "review",
@@ -159,7 +161,9 @@ class Scheduler_v1:
                 "step_index": 0,
             }
 
-        next_step = card.step_index + 1
+        current_step = card.step_index if card.step_index is not None else 0
+        next_step = current_step + 1
+        
         if next_step >= self.relearning_steps: # schedule里也没有循环啊？在哪里循环？
             return {
                 "status": "review",

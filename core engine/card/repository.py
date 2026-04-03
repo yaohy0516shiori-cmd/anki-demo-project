@@ -68,6 +68,13 @@ class InMemoryCardRepository:
         result.sort(key=lambda card: card.template_ord)
         return result
 
+    def get_cards_by_note_id_and_ord(self,note_id:int,template_ord:int):
+        # get a card from the repository by note id and template ord
+        for data in self.__cards.values():
+            if data["note_id"]==note_id and data["template_ord"]==template_ord:
+                return self.__deserialize_card(data)
+        return None
+        
     def list_cards(self):
         # get all cards from the repository
         return (self.__deserialize_card(data) for data in self.__cards.values())
@@ -80,14 +87,31 @@ class InMemoryCardRepository:
             raise ValueError("Card not found")
         self.__cards[card.card_id]=self.__serialize_card(card)
         return self.__deserialize_card(self.__cards[card.card_id])
+
+    def delete_cards_by_note_id(self,note_id:int):
+        # delete all cards from the repository by note id
+        deleted_id=[]
+        for card_id, data in self.__cards.items():
+            if data["note_id"]==note_id:
+                deleted_id.append(card_id)
+        for card_id in deleted_id:
+            del self.__cards[card_id]
+        return deleted_id
+    
+    def delete_cards_by_note_id_and_ord(self,note_id:int,template_ord:int):
+        # delete all cards from the repository by note id and template ord
+        deleted_id=[]
+        for card_id, data in self.__cards.items():
+            if data["note_id"]==note_id and data["template_ord"]==template_ord:
+                deleted_id.append(card_id)
+        for card_id in deleted_id:
+            del self.__cards[card_id]
+        return deleted_id
     
     def delete_card(self,card_id:int):
-        # delete a card from the repository
+        # delete a card from the repository by card id
         if card_id not in self.__cards:
             raise ValueError("Card not found")
-        del self.__cards[card_id]
-        return True
-    
     def clear_cards(self):
         # clear all cards from the repository
         # safety check
