@@ -64,7 +64,7 @@ class StudyService:
     # Pop the next card from session queues and render front/back
     def get_next_card(self):
         if self.__current_card_id is not None:
-            raise ValueError("Current card has not been answered yet")
+            raise ValueError("Finish the current card before getting the next one")
 
         card=self.__pop_next_card()
         if card is None:
@@ -86,7 +86,7 @@ class StudyService:
     # Submit rating for current card, call review service, and re-enqueue if needed
     def rate_current_card(self,rating:str):
         if self.__current_card_id is None:
-            raise ValueError("No current card to answer")
+            raise ValueError("No current card to rate")
         result=self.__review_service.review_card(
             self.__current_card_id,
             rating,
@@ -103,7 +103,7 @@ class StudyService:
 
     def reveal_back_of_current_card(self):
         if self.__current_card_id is None:
-            raise ValueError("No card to reveal")
+            raise ValueError("No current card to reveal")
         card=self.__card_repo.get_card(self.__current_card_id)
         if card is None:
             raise ValueError("Card not found")
