@@ -17,7 +17,7 @@
 | DB          | PostgreSQL                 |
 | Cache/Queue | Redis                      |
 | Worker      | Celery/RQ                  |
-| Engine      | Python + Rust              |
+| Engine      | Python + Rust/Go           |
 
 ### -- basic plan
 
@@ -1661,3 +1661,349 @@ StudyService.is_finished()
 - typed answer 自动判题
 - deck / SQLite / API / 前端
 - 更完整的 FSRS / daily limits
+
+
+
+# **2026-04-04**
+
+## Coding
+
+### 1. SQLite 这一阶段到底做什么
+
+**问题整合：现在要不要开始 SQLite？SQL 放哪？做几张表？**
+
+**结论：**
+ 现在开始做 SQLite 是对的，但目标只是做**最小持久层**，不是一次做完整数据库系统。
+ 参照 Anki 的放法，`schema.sql` 放在：
+
+```
+coreengine/storage/schema.sql
+```
+
+这一阶段只做三张表：
+
+- `notes`
+- `cards`
+- `review_logs`
+
+先不做：
+
+- `note_types` 表
+- `deck`
+- `tags` 关联表
+- `media`
+- migration
+
+**核心原则：**
+ 先让 `note / card / reviewlog` 能真实落库，方便后续模块测试，不提前把结构做重。
+
+------
+
+### 2. 表字段怎么设计，尤其是 `due / created_at / NULL`
+
+**问题整合：为什么 `due` 不默认时间？为什么 `review_logs` 里的 due 可以是 `NULL`？`created_at DEFAULT CURRENT_TIMESTAMP` 有没有问题？**
+
+**结论：**
+ 这些字段语义不一样，不能一概而论。
+
+### `cards.due`
+
+虽然源码里构造参数写的是：
+
+```
+due: date | None = None
+self.due = due if due is not None else today
+```
+
+但这说明的只是：**输入时可以不传**，不是最终对象状态允许长期为 `None`。
+ `Card` 实例创建完以后，`due` 已经被补成具体日期了，所以数据库里更适合：
+
+```
+due TEXT NOT NULL
+```
+
+### `review_logs.old_due / new_due`
+
+这是**历史快照字段**，记录某次复习前后的变化，允许为空是正常的。
+ 所以 log 里的 `due` 可空，和 `cards.due` 非空并不冲突。
+
+### `created_at`
+
+`DEFAULT CURRENT_TIMESTAMP` 只在插入时生效一次，不会自动反复更新。
+ 真正要防止它被改，主要靠 repo 的 update 逻辑不要去改它。
+
+**总原则：**
+
+- 当前状态字段：尽量非空
+- 历史快照字段：可以为空
+- 默认值只该给“元信息字段”，不该乱给业务调度字段
+
+------
+
+### 3. 外键和索引到底在干嘛
+
+**问题整合：`FOREIGN KEY ... ON DELETE CASCADE` 是什么？索引名字怎么理解？为什么查询写 `note_id=?` 不写索引名？**
+
+**结论：**
+
+#### 外键
+
+```
+FOREIGN KEY(note_id) REFERENCES notes(id) ON DELETE CASCADE
+```
+
+意思是：
+
+- `cards.note_id` 必须引用真实存在的 `notes.id`
+- 如果 note 被删，相关 cards 自动一起删
+
+作用：防止出现“note 没了但 card 还留着”的脏数据。
+
+#### 索引
+
+```
+CREATE INDEX idx_cards_note_id ON cards(note_id);
+```
+
+这里：
+
+- `idx_cards_note_id` 只是**索引对象的名字**
+- 真正起作用的是 `ON cards(note_id)`，表示数据库额外维护了一份按 `note_id` 组织的查找结构
+
+所以查询时仍然写：
+
+```
+SELECT * FROM cards WHERE note_id = ?;
+```
+
+不是写索引名。
+ 索引名只是给数据库内部那份“目录”取个名字，不是表字段。
+
+**一句话：**
+ 外键解决“引用关系正确”，索引解决“查询速度更快”。
+
+------
+
+### 4. 连接层和路径怎么写
+
+**问题整合：下一步写什么？`create_connection(...)` 是什么意思？没有 db 文件能不能先写？数据库目录和 coreengine 同级时路径怎么处理？**
+
+**结论：**
+ 三张表定完以后，下一步不是马上写 repo，而是先写：
+
+1. `sqlite_connection.py`
+2. `schema.py`
+3. `note_sqlite_repository.py`
+
+`create_connection(...)` 本质上就是一个“创建 SQLite 连接”的函数。
+ 即使现在还没有 `.db` 文件也没关系，SQLite 第一次连接时可以自动创建。
+
+如果你的目录是：
+
+```
+project_root/
+  coreengine/
+  database/
+```
+
+那不要写脆弱的裸相对路径，而是从 `sqlite_connection.py` 所在文件位置反推到项目根目录，再拼出：
+
+```
+database/anki_demo.db
+```
+
+### 5. today 传递链打通
+
+**问题：** session 用固定 `TODAY`，但建卡/补卡如果没传 `today`，会回退到系统当天，导致测试取不到卡。
+ **修改：**
+
+- `card/service.py`
+  - `create_cards_from_note(self, note, today=None)` 支持外部传 `today`
+  - `reconcile_cards_for_note(self, note, today=None)` 支持外部传 `today`
+  - 新建 card 时统一使用：
+    - `today if today is not None else system_today`
+- `note/service.py`
+  - `create_note(..., today=None)` 把 `today` 继续传给 `card_service`
+  - `update_note(..., today=None)` 同样把 `today` 传下去
+- `reviewlogger/service.py`
+  - `review_card(..., today=None)` 接收 session 的 `today`
+- `scheduler/simple_scheduler.py`
+  - `schedule(..., today=None)` 支持外部传入日期
+- `study/service.py`
+  - `rate_current_card()` 调 `review_service.review_card(..., today=self.__today)`
+     **结论：** create card / study session / review / scheduler 现在都可以共享同一个测试日期，避免 due 与 session 日期不一致。
+
+------
+
+### 6. note-card 生命周期同步完善
+
+**问题：** note 更新后 card 集合可能失真；删除 note 后可能留下孤儿 card。
+ **修改：**
+
+- `card/repository.py`
+  - 新增按 `note_id` 批量删除 card 的能力
+  - 修正 `delete_card()`，确保真正删除而不是只检查
+- `card/service.py`
+  - 增加/整理 `reconcile_cards_for_note(note, today=None)`
+  - reconcile 规则明确为：
+    - 多余 ord -> 删除
+    - 缺失 ord -> 新增
+    - 仍然有效 ord -> 保留原 card
+- `note/service.py`
+  - `create_note()` 后自动同步 cards
+  - `update_note()` 后自动同步 cards
+  - `delete_note()` 时先删该 note 的全部 cards，再删 note
+     **结论：** note 和 card 的生命周期绑定起来了，不再依赖外部手动补同步。
+
+------
+
+### 7. 测试体系补齐
+
+**问题：** 之前测试主要是零散验证，看不到完整流程，也缺少 reverse / cloze / reviewlog 覆盖。
+ **修改：**
+
+- `test.py` / `test_basic.py`
+  - 增加并修正 `build_app()` 与 helper
+  - helper 显式传 `today=TODAY`
+  - 补充连续学习、重新入队、非法流程测试
+- 新增/完善：
+  - `test_reverse.py`
+  - `test_cloze.py`
+  - `test_reviewlog.py`
+- 测试覆盖内容包括：
+  - `basic_reverse` 两张卡是否正确生成与正反 render
+  - `cloze` 的 ord 增删是否正确同步
+  - `reviewlog` 的 old/new 字段是否正确记录
+  - `get -> reveal -> rate` 连续学习流是否正常
+     **结论：**当前 core engine 的关键分支基本都有测试覆盖。
+
+------
+
+### 8. demo 流程可视化
+
+**问题：** assert 测试只能看通过/失败，看不到输入输出和日志长什么样。
+ **修改：**
+
+- 新增/整理 `demoflow.py`
+  - 打印：
+    - create note 输入输出
+    - get_next_card 返回内容
+    - reveal_back_of_current_card 返回内容
+    - rate_current_card 后 card 新状态
+    - review log 结构
+       **结论：**除了断言测试，现在还有一个可视化 demo 脚本用来直接观察流程效果。
+
+------
+
+### 9. 包结构与运行方式统一
+
+**问题：** 直接运行测试文件会报 `ModuleNotFoundError: No module named 'coreengine'`。
+ **修改：**
+
+- 统一项目按包模式运行：
+  - 从项目根目录使用 `python -m coreengine.test.xxx`
+- 调整包结构与 import 使用方式，避免脚本式导入和包式导入混用
+- 补齐 `__init__.py` 相关包标识
+   **结论：**测试与模块导入方式从“单文件脚本运行”转向“包级模块运行”
+
+## DESIGN QUESTION
+
+### 1. 当前阶段完成度与主线判断
+
+- 当前 `core engine` 的基础闭环已经打通：`note -> card -> render -> study session -> scheduler -> review log`。
+- `basic / basic_reverse / cloze / reviewlog` 相关测试已补齐并通过，说明这一阶段的核心模型和学习流程基本稳定。
+- 当前可以进入下一阶段，但要明确下一阶段是“继续补核心学习规则”还是“开始做持久化基座”。
+
+------
+
+### 2. 关于下一步到底先做什么
+
+- 最开始给出的周计划里，第 3 阶段本来应该先做：
+  - `deck`
+  - `deckconfig`
+  - `scheduler v2`
+  - `again/hard/good/easy`
+  - `learning/relearning steps`
+  - `daily limits`
+- 之前建议先做 SQLite，是从“工程落地”和“尽快有真实持久化系统”的角度出发，不是唯一顺序。
+- 当前结论是：
+  - **如果严格按功能演进走**：先做 `deck + scheduler v2`
+  - **如果从测试和后续系统地基考虑**：先做一个**最小 SQLite 基座**也合理
+- 你当前的计划表是可以动态调整的，不是死规定。
+
+------
+
+### 3. 关于 SQLite 是否该提前做
+
+- SQLite 不是一种新语言，而是一个轻量级嵌入式数据库，用的仍然是 SQL。
+- Python 自带 `sqlite3`，所以环境上几乎不需要额外复杂配置。
+- 如果现在先做 SQLite，后面大概率还会继续补：
+  - 新表
+  - 新字段
+  - schema 调整
+- 但只要你现在定位成**最小持久化**，复杂度是可控的。
+- 当前适合的做法不是“一次设计完整数据库”，而是：
+  - 先只持久化 `notes / cards / review_logs`
+  - 把 SQLite 当成**后续 deck 等功能的测试基座**
+- 从测试角度讲，先做最小 SQLite 是有帮助的，因为后面 deck/config/stats 的很多问题本质上是“查询和持久化问题”，不是纯逻辑问题。
+
+------
+
+### 4. 关于 PostgreSQL 什么时候上
+
+- PostgreSQL 现在还不该上。
+- 更合理的顺序是：
+  - `in-memory`
+  - `SQLite`
+  - `PostgreSQL`
+- PostgreSQL 更适合在这些条件出现后再上：
+  - schema 基本稳定
+  - API 已开始做
+  - 前后端开始真正联调
+  - 需要更接近真实后端部署
+- 当前更适合先 SQLite，等 API 和后端结构稳定后再换 PostgreSQL。
+
+------
+
+### 5. 关于最小可运行 stack 的确认
+
+- 当前最小 MVP stack 可以明确为：
+  - **React + TypeScript**
+  - **FastAPI**
+  - **Python engine**
+  - **SQLite**
+- Redis 现在基本用不上。
+- Redis 主要在以下场景才有意义：
+  - 异步任务
+  - 缓存
+  - 队列
+  - 多用户、更真实部署
+- 对当前这个单机学习引擎 demo，Redis 不是必需品。
+
+------
+
+### 6. 关于运行日志是否要单独存表
+
+- 当前要区分两类日志：
+  1. **业务日志**：例如 `review_logs`，记录卡片评分和状态变化，这类必须入库
+  2. **运行日志**：例如 bug/warning/error，这类是工程调试日志
+- 当前阶段不建议优先把运行日志做成数据库表。
+- 更合理的做法是：
+  - `review_logs` 继续作为业务表保留
+  - 程序运行日志先写文件（如 `app.log`）
+- 后面如果真的需要做“错误历史查询 / 后台查看 warning / 前端展示运行异常”，再单独设计 `app_logs` 表。
+
+------
+
+### 7. 关于 Go / 多语言替换时机
+
+- 可以逐步替换成 Go，但现在不应该因为“项目不想纯 Python”就马上动主干。
+- 纯 Python 在原型和核心模型快速演进阶段是正常的，不丢人。
+- 当前更重要的是：
+  - 边界清晰
+  - 测试稳定
+  - 模型可替换
+- 更合理的替换方式不是“现在直接把 core engine 改成 Go”，而是：
+  - 先把 Python 完整版本做稳
+  - 之后挑独立模块、worker 或 service 逐步替换
+- 当前阶段做 Go 的正确方向是“预留替换点”，不是立刻迁移主干
