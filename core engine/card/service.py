@@ -11,18 +11,18 @@ class CardService:
     def __init__(self, card_repo:InMemoryCardRepository):
         self.card_repo = card_repo
 
-    def create_cards_from_note(self, note:Note):
+    def create_cards_from_note(self, note:Note, today=None):
         # Decide how many cards to generate from a note and save them
         if note.note_id is None:
             raise ValueError("Note id is required")
         create_cards = []
-        today=datetime.now(timezone.utc).date()
+        default_today=today if today is not None else datetime.now(timezone.utc).date()
         now=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
         for template_ord in self.get_template_ords(note):
             card=Card(note_id=note.note_id, 
             template_ord=template_ord, 
             status='new',
-            due=today,
+            due=default_today,
             created_at=now,
             updated_at=now)
             create_cards.append(self.card_repo.add_card(card))
@@ -57,7 +57,7 @@ class CardService:
         # delete all cards generated from a note
         return self.card_repo.delete_cards_by_note_id(note_id)
     
-    def reconcile_cards_for_note(self, note:Note):
+    def reconcile_cards_for_note(self, note:Note, today=None):
         # synchronize existing cards with current note fields
         if note.note_id is None:
             raise ValueError("Note id is required")
@@ -71,7 +71,7 @@ class CardService:
             if card.template_ord not in expected_template_ords_set:
                 self.card_repo.delete_card(card.card_id)
             
-        today=datetime.now(timezone.utc).date()
+        default_today=today if today is not None else datetime.now(timezone.utc).date()
         now=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
         for template_ord in expected_template_ords:
@@ -81,7 +81,7 @@ class CardService:
                 note_id=note.note_id,
                 template_ord=template_ord,
                 status='new',
-                due=today,
+                due=default_today,
                 created_at=now,
                 updated_at=now
             )

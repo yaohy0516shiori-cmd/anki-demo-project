@@ -15,7 +15,7 @@ class NoteService:
         self.__repository_note = repository_note
         self.__card_service = card_service
    
-    def create_note(self, note_type, fields, tags=None,note_id=None):
+    def create_note(self, note_type, fields, tags=None,note_id=None,today=None):
         # create a note: validate, deduplicate, construct Note, save to repo
         tags=tags if tags is not None else []
         self.__validate_fields(note_type, fields)
@@ -27,7 +27,7 @@ class NoteService:
         saved_note = self.__repository_note.get_note(saved_note_id)
 
         if self.__card_service is not None:
-            self.__card_service.reconcile_cards_for_note(saved_note)
+            self.__card_service.reconcile_cards_for_note(saved_note,today)
 
         return saved_note_id
 
@@ -40,7 +40,7 @@ class NoteService:
         # get all notes from the repository
         return self.__repository_note.get_all_notes()
 
-    def update_note(self, note_id, fields=None, tags=None):
+    def update_note(self, note_id, fields=None, tags=None,today=None):
         # update a note in the repository, fields/tags, refresh, then save to repo
         note = self.__repository_note.get_note(note_id)
         note_type=get_note_type(note.note_type_id)
@@ -59,7 +59,7 @@ class NoteService:
         updated_note = self.__repository_note.get_note(updated_note_id)
 
         if self.__card_service is not None:
-            self.__card_service.reconcile_cards_for_note(updated_note)
+            self.__card_service.reconcile_cards_for_note(updated_note,today)
 
         return updated_note_id
 
