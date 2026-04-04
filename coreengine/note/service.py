@@ -3,12 +3,12 @@ Organize the business process of the note, perform business verification
 Not responsible for storage, storage is handed over to the repo.
 Not responsible for the consistency of underlying objects, that part is entrusted to Note
 '''
-from note.notemodels import Note
-from note.utils import calculate_checksum
-from note.repository import InMemoryNoteRepository
-from note_type.notetype import NoteType
-from note_type.type_registry import get_note_type
-from card.service import CardService
+from .notemodels import Note
+from .utils import calculate_checksum
+from .repository import InMemoryNoteRepository
+from ..note_type.notetype import NoteType
+from ..note_type.type_registry import get_note_type
+from ..card.service import CardService
 
 class NoteService:
     def __init__(self, repository_note:InMemoryNoteRepository, card_service:CardService):

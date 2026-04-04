@@ -1,4 +1,4 @@
-from reviewlogger.review import ReviewLog
+from .review import ReviewLog
 from typing import List
 
 # store review logs in memory

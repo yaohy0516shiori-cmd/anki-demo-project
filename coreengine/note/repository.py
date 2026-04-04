@@ -1,5 +1,5 @@
 # In-memory repository: simulate SQLite
-from note.notemodels import Note
+from .notemodels import Note
 from datetime import datetime, timezone
 class InMemoryNoteRepository:
     def __init__(self):

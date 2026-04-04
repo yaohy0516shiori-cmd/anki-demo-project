@@ -1,5 +1,5 @@
 from datetime import datetime,timezone,date
-from reviewlogger.utils import normalize_datetime_value
+from .utils import normalize_datetime_value
 class ReviewLog:
     '''
     record complete review process for a card

@@ -1,10 +1,10 @@
-from note_type.notetype import NoteType
-from note.notemodels import Note
-from card.cardmodel import Card
+from ..note_type.notetype import NoteType
+from ..note.notemodels import Note
+from .cardmodel import Card
 from datetime import datetime, timezone
-from note_type.type_registry import get_note_type
+from ..note_type.type_registry import get_note_type
 import re
-from card.repository import InMemoryCardRepository
+from .repository import InMemoryCardRepository
 
 # Generate cards from notes and provide card-level business interfaces.
 class CardService:

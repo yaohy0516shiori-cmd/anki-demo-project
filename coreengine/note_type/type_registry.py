@@ -1,4 +1,4 @@
-from note_type.notetype import NoteType
+from .notetype import NoteType
 
 # define basic note type
 BASIC = NoteType(

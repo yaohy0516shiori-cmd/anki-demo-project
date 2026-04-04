@@ -1,4 +1,4 @@
-from card.cardmodel import Card
+from .cardmodel import Card
 
 # Store cards in memory. will be replaced by database in the future
 class InMemoryCardRepository:

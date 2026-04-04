@@ -1,223 +1,175 @@
-from datetime import date
-from pprint import pprint
-
-from note.repository import InMemoryNoteRepository
-from note.service import NoteService
-from note_type.type_registry import BASIC
-from card.repository import InMemoryCardRepository
-from card.service import CardService
-from reviewlogger.repository import ReviewLoggerRepository
-from reviewlogger.service import ReviewLoggerService
-from scheduler.simple_scheduler import Scheduler_v1
-from study.service import StudyService
+from coreengine.test.test_basic import build_app, TODAY, create_basic_note_with_one_card
 
 
-# 固定 demo 日期，保证输出稳定、可复现
-TODAY = date(2026, 4, 3)
-
-
-def build_app():
+def test_reviewlog_records_first_transition_from_new_to_learning():
     """
-    创建一套 demo 用的 in-memory 应用环境。
-    作用和 test 里的 build_app 类似，但这里主要用于打印过程，不是做 assert。
+    测试：
+    新卡第一次打 good 后，
+    revlog 是否正确记录：
+    - old_status = new
+    - new_status = learning
+    - reps 从 0 -> 1
+    - step_index 从 None -> 0
     """
-    note_repo = InMemoryNoteRepository()
-    card_repo = InMemoryCardRepository()
-    card_service = CardService(card_repo)
-    note_service = NoteService(note_repo, card_service)
-
-    review_repo = ReviewLoggerRepository()
-    scheduler = Scheduler_v1()
-    review_service = ReviewLoggerService(card_repo, review_repo, scheduler)
-
-    study_service = StudyService(card_repo, review_service, note_repo)
-
-    return {
-        "note_repo": note_repo,
-        "card_repo": card_repo,
-        "card_service": card_service,
-        "note_service": note_service,
-        "review_repo": review_repo,
-        "review_service": review_service,
-        "study_service": study_service,
-    }
-
-
-def card_view(card):
-    """
-    把 Card 对象整理成更适合打印的字典。
-    这样你能直观看到 card 当前状态，而不是一整坨对象信息。
-    """
-    return {
-        "card_id": card.card_id,
-        "note_id": card.note_id,
-        "template_ord": card.template_ord,
-        "status": card.status,
-        "due": card.due,
-        "interval": card.interval,
-        "ease": card.ease,
-        "reps": card.reps,
-        "lapses": card.lapses,
-        "step_index": card.step_index,
-    }
-
-
-def log_view(log):
-    """
-    把 ReviewLog 对象整理成清晰字典。
-    重点看 old_* / new_* 的变化，这就是一条评分后状态变化的完整记录。
-    """
-    return {
-        "log_id": log.log_id,
-        "card_id": log.card_id,
-        "rating": log.rating,
-        "old_status": log.old_status,
-        "new_status": log.new_status,
-        "old_due": log.old_due,
-        "new_due": log.new_due,
-        "old_interval": log.old_interval,
-        "new_interval": log.new_interval,
-        "old_ease": log.old_ease,
-        "new_ease": log.new_ease,
-        "old_lapses": log.old_lapses,
-        "new_lapses": log.new_lapses,
-        "old_reps": log.old_reps,
-        "new_reps": log.new_reps,
-        "old_step_index": log.old_step_index,
-        "new_step_index": log.new_step_index,
-        "review_time": log.review_time,
-    }
-
-
-def main():
     app = build_app()
-
-    # ---------------------------
-    # 1. 创建一条 BASIC note
-    # ---------------------------
-    note_id = app["note_service"].create_note(
-        BASIC,
-        ["hello", "你好"],
-        [],
-        today=TODAY,
-    )
-
-    print("=== create note ===")
-    print("input:")
-    print({
-        "note_type": "BASIC",
-        "fields": ["hello", "你好"],
-        "tags": [],
-        "today": TODAY,
-    })
-    print("output:")
-    print({"note_id": note_id})
-
-    # 看看 note 创建后生成了哪些 cards
-    cards = app["card_service"].get_card_by_note_id(note_id)
-    print("\n=== cards after note creation ===")
-    pprint([card_view(card) for card in cards])
-
-    # ---------------------------
-    # 2. 启动学习 session
-    # ---------------------------
     study_service = app["study_service"]
     review_repo = app["review_repo"]
 
+    _, first_card = create_basic_note_with_one_card(app)
+
     study_service.start_study_session(today=TODAY)
 
-    print("\n=== start study session ===")
-    print("input:")
-    print({"today": TODAY})
-    print("output:")
-    print("session started")
-
-    # ---------------------------
-    # 3. 第一次 get：出 front
-    # ---------------------------
     item = study_service.get_next_card()
+    assert item is not None
+    assert item["card"].card_id == first_card.card_id
 
-    print("\n=== get_next_card() ===")
-    print("input:")
-    print("get_next_card()")
-    print("output:")
-    pprint({
-        "card_id": item["card"].card_id,
-        "front": item["front"],
-        "status": item["status"],
-        "step_index": item["step_index"],
-    })
-
-    # ---------------------------
-    # 4. reveal：看答案
-    # ---------------------------
-    back = study_service.reveal_back_of_current_card()
-
-    print("\n=== reveal_back_of_current_card() ===")
-    print("input:")
-    print("reveal_back_of_current_card()")
-    print("output:")
-    pprint({"back": back})
-
-    # ---------------------------
-    # 5. 第一次评分：good
-    # ---------------------------
+    study_service.reveal_back_of_current_card()
     result = study_service.rate_current_card("good")
 
-    print("\n=== rate_current_card('good') ===")
-    print("input:")
-    print({"rating": "good"})
-    print("updated card:")
-    pprint(card_view(result["card"]))
-    print("new review log:")
-    pprint(log_view(result["log"]))
+    updated_card = result["card"]
+    log = result["log"]
 
-    # ---------------------------
-    # 6. 再 get 一次：如果 due=today，应重新入队
-    # ---------------------------
+    # 当前 card 的新状态
+    assert updated_card.status == "learning"
+    assert updated_card.step_index == 0
+    assert updated_card.reps == 1
+
+    # log 里记录的 old/new 应与这次变化一致
+    assert log.card_id == first_card.card_id
+    assert log.rating == "good"
+    assert log.old_status == "new"
+    assert log.new_status == "learning"
+    assert log.old_reps == 0
+    assert log.new_reps == 1
+    assert log.old_step_index is None
+    assert log.new_step_index == 0
+    assert log.old_due == TODAY
+    assert log.new_due == TODAY
+
+    # 仓库里应已有 1 条日志
+    assert review_repo.count_logs() == 1
+
+
+def test_reviewlog_history_accumulates_multiple_reviews():
+    """
+    测试：
+    同一张卡连续评分两次后，
+    review log history 应该有两条记录，且状态变化连续正确。
+    """
+    app = build_app()
+    study_service = app["study_service"]
+    review_service = app["review_service"]
+
+    _, first_card = create_basic_note_with_one_card(app)
+
+    study_service.start_study_session(today=TODAY)
+
+    # 第一次：new -> learning(step 0)
+    item = study_service.get_next_card()
+    assert item is not None
+    study_service.reveal_back_of_current_card()
+    result1 = study_service.rate_current_card("good")
+    log1 = result1["log"]
+
+    # 第二次：learning(step 0) -> learning(step 1)
     item2 = study_service.get_next_card()
+    assert item2 is not None
+    study_service.reveal_back_of_current_card()
+    result2 = study_service.rate_current_card("good")
+    log2 = result2["log"]
 
-    print("\n=== get_next_card() again ===")
-    print("input:")
-    print("get_next_card()")
-    print("output:")
-    pprint({
-        "card_id": item2["card"].card_id,
-        "front": item2["front"],
-        "status": item2["status"],
-        "step_index": item2["step_index"],
-    })
+    history = review_service.get_review_log_history(first_card.card_id)
 
-    # ---------------------------
-    # 7. 再 reveal 一次
-    # ---------------------------
-    back2 = study_service.reveal_back_of_current_card()
+    assert len(history) == 2
 
-    print("\n=== reveal_back_of_current_card() again ===")
-    print("input:")
-    print("reveal_back_of_current_card()")
-    print("output:")
-    pprint({"back": back2})
+    # 第一条
+    assert log1.old_status == "new"
+    assert log1.new_status == "learning"
+    assert log1.old_step_index is None
+    assert log1.new_step_index == 0
 
-    # ---------------------------
-    # 8. 第二次评分：again
-    # ---------------------------
-    result2 = study_service.rate_current_card("again")
+    # 第二条
+    assert log2.old_status == "learning"
+    assert log2.new_status == "learning"
+    assert log2.old_step_index == 0
+    assert log2.new_step_index == 1
 
-    print("\n=== rate_current_card('again') ===")
-    print("input:")
-    print({"rating": "again"})
-    print("updated card:")
-    pprint(card_view(result2["card"]))
-    print("new review log:")
-    pprint(log_view(result2["log"]))
+    # 从 history 里再检查一次，保证 repository 也正确存下来了
+    history = sorted(history, key=lambda x: x.log_id)
+    assert history[0].log_id == log1.log_id
+    assert history[1].log_id == log2.log_id
 
-    # ---------------------------
-    # 9. 打印仓库里的全部日志
-    # ---------------------------
-    print("\n=== all logs in repository ===")
-    # 这里假设你的 review_repo 有 get_all_logs() 方法
-    pprint([log_view(log) for log in review_repo.get_all_logs()])
+
+def test_reviewlog_records_review_failure_into_relearning():
+    """
+    测试：
+    把一张卡手动设成 review；
+    在今天到期时打 again；
+    应记录：
+    - review -> relearning
+    - lapses + 1
+    - ease 降低
+    """
+    app = build_app()
+    study_service = app["study_service"]
+    card_repo = app["card_repo"]
+
+    _, first_card = create_basic_note_with_one_card(app)
+
+    # 先把卡改成 review 状态
+    review_card = card_repo.get_card(first_card.card_id)
+    review_card.status = "review"
+    review_card.due = TODAY
+    review_card.interval = 3
+    review_card.ease = 2.5
+    review_card.reps = 10
+    review_card.lapses = 0
+    review_card.step_index = None
+    card_repo.update_card(review_card)
+
+    study_service.start_study_session(today=TODAY)
+
+    item = study_service.get_next_card()
+    assert item is not None
+    assert item["status"] == "review"
+
+    study_service.reveal_back_of_current_card()
+    result = study_service.rate_current_card("again")
+
+    log = result["log"]
+    updated_card = result["card"]
+
+    # 当前 card 新状态
+    assert updated_card.status == "relearning"
+    assert updated_card.step_index == 0
+    assert updated_card.lapses == 1
+    assert updated_card.ease == 2.3
+
+    # log 是否完整记录了 review -> relearning
+    assert log.rating == "again"
+    assert log.old_status == "review"
+    assert log.new_status == "relearning"
+    assert log.old_interval == 3
+    assert log.new_interval == 0
+    assert log.old_lapses == 0
+    assert log.new_lapses == 1
+    assert log.old_ease == 2.5
+    assert log.new_ease == 2.3
+    assert log.old_step_index is None
+    assert log.new_step_index == 0
+
+
+def main():
+    test_reviewlog_records_first_transition_from_new_to_learning()
+    print("test_reviewlog_records_first_transition_from_new_to_learning passed")
+
+    test_reviewlog_history_accumulates_multiple_reviews()
+    print("test_reviewlog_history_accumulates_multiple_reviews passed")
+
+    test_reviewlog_records_review_failure_into_relearning()
+    print("test_reviewlog_records_review_failure_into_relearning passed")
+
+    print("all reviewlog tests passed")
 
 
 if __name__ == "__main__":

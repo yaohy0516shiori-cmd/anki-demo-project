@@ -1,11 +1,11 @@
 from collections import deque
 from datetime import datetime,timezone,date
-from card.cardmodel import Card
-from card.repository import InMemoryCardRepository
-from reviewlogger.repository import ReviewLoggerRepository
-from reviewlogger.service import ReviewLoggerService
-from render.card_render import render_card
-from note.repository import InMemoryNoteRepository
+from ..card.cardmodel import Card
+from ..card.repository import InMemoryCardRepository
+from ..reviewlogger.repository import ReviewLoggerRepository
+from ..reviewlogger.service import ReviewLoggerService
+from ..render.card_render import render_card
+from ..note.repository import InMemoryNoteRepository
 
 # Study session coordinator.
 class StudyService:
@@ -74,7 +74,6 @@ class StudyService:
         if note is None:
             raise ValueError("Note not found")
         rendered=render_card(card,note)
-        # where is create card?
         return {
             "card":card,
             "note":note,

@@ -1,7 +1,7 @@
-from reviewlogger.repository import ReviewLoggerRepository as review_repo
-from card.repository import InMemoryCardRepository as card_repo
-from scheduler.simple_scheduler import Scheduler_v1 as scheduler
-from reviewlogger.review import ReviewLog
+from .repository import ReviewLoggerRepository as review_repo
+from ..card.repository import InMemoryCardRepository as card_repo
+from ..scheduler.simple_scheduler import Scheduler_v1 as scheduler
+from .review import ReviewLog
 
 
 class ReviewLoggerService:

@@ -14,7 +14,7 @@ from typing import List, Optional
 from datetime import datetime,timezone 
 # datetime 有module和class重名
 import hashlib
-from note.utils import calculate_checksum
+from .utils import calculate_checksum
 
 @dataclass
 class Note:

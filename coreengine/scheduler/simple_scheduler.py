@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone, date
-from card.cardmodel import Card
+from ..card.cardmodel import Card
 
 class Scheduler_v1:
     """
@@ -66,13 +66,13 @@ class Scheduler_v1:
             }
         elif rating=="again":
             return {
-                "status":"new",
+                "status":"learning",
                 "due":today, # why today?
                 "interval":0,
                 "ease":card.ease,
                 "lapses":card.lapses,
                 "reps":card.reps+1,
-                "step_index":None, # 重复第一次展示（比如我后面每张复习卡可以设计不同的出卡方式？）
+                "step_index":0, # 重复第一次展示（比如我后面每张复习卡可以设计不同的出卡方式？）
             }
     
     # Compute next state for a learning card

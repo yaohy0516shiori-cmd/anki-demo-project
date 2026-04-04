@@ -1,14 +1,14 @@
 from datetime import date
 
-from coreengine.note.repository import InMemoryNoteRepository
-from coreengine.note.service import NoteService
-from coreengine.note_type.type_registry import BASIC
-from coreengine.card.repository import InMemoryCardRepository
-from coreengine.card.service import CardService
-from coreengine.reviewlogger.repository import ReviewLoggerRepository
-from coreengine.reviewlogger.service import ReviewLoggerService
-from coreengine.scheduler.simple_scheduler import Scheduler_v1
-from coreengine.study.service import StudyService
+from ..note.repository import InMemoryNoteRepository
+from ..note.service import NoteService
+from ..note_type.type_registry import BASIC
+from ..card.repository import InMemoryCardRepository
+from ..card.service import CardService
+from ..reviewlogger.repository import ReviewLoggerRepository
+from ..reviewlogger.service import ReviewLoggerService
+from ..scheduler.simple_scheduler import Scheduler_v1
+from ..study.service import StudyService
 
 
 # 固定测试日期：
@@ -110,16 +110,16 @@ def test_new_card_again_requeues_same_day():
     # new + again -> learning(step 0), due = today
     # 所以它今天仍然 eligible，会重新入队
     assert updated_card.card_id == first_card.card_id
-    assert updated_card.status == "new"
+    assert updated_card.status == "learning"
     assert updated_card.due == TODAY
-    assert updated_card.step_index == None
+    assert updated_card.step_index == 0
     assert updated_card.reps == 1
 
     # 再取下一张，应该还是同一张卡
     next_item = study_service.get_next_card()
     assert next_item is not None
     assert next_item["card"].card_id == first_card.card_id
-    assert next_item["status"] == "new"
+    assert next_item["status"] == "learning"
 
     # 本次评分应该写入 1 条 review log
     assert review_repo.count_logs() == 1

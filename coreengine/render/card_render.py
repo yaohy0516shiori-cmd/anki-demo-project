@@ -1,7 +1,7 @@
 import re
-from card.cardmodel import Card
-from note.notemodels import Note
-from note_type.type_registry import get_note_type
+from ..card.cardmodel import Card
+from ..note.notemodels import Note
+from ..note_type.type_registry import get_note_type
 
 '''
 lack of kind: one cloze note generate one card with multiple cloze
