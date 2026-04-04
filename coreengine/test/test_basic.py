@@ -1,14 +1,14 @@
 from datetime import date
 
-from note.repository import InMemoryNoteRepository
-from note.service import NoteService
-from note_type.type_registry import BASIC
-from card.repository import InMemoryCardRepository
-from card.service import CardService
-from reviewlogger.repository import ReviewLoggerRepository
-from reviewlogger.service import ReviewLoggerService
-from scheduler.simple_scheduler import Scheduler_v1
-from study.service import StudyService
+from coreengine.note.repository import InMemoryNoteRepository
+from coreengine.note.service import NoteService
+from coreengine.note_type.type_registry import BASIC
+from coreengine.card.repository import InMemoryCardRepository
+from coreengine.card.service import CardService
+from coreengine.reviewlogger.repository import ReviewLoggerRepository
+from coreengine.reviewlogger.service import ReviewLoggerService
+from coreengine.scheduler.simple_scheduler import Scheduler_v1
+from coreengine.study.service import StudyService
 
 
 # 固定测试日期：
