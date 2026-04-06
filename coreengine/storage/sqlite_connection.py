@@ -3,9 +3,9 @@ from pathlib import Path
 
 def create_connection(db_path:str)->sqlite3.Connection:
     root_path = Path(__file__).parent.parent.parent
-    db_path = root_path / "database" / "anki_demo.db"
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
+    # row_factory is used to convert the result of the query to a dictionary
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
