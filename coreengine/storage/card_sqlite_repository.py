@@ -31,7 +31,7 @@ class SqliteCardRepository:
             template_ord=row['template_ord'],
             status=row['status'],
             # make sure that for due, it is a date object, which is a date object
-            due=date(row['due']),
+            due=date.fromisoformat(row['due']),
             interval=int(row['interval']),
             ease=row['ease'],
             reps=int(row['reps']),
@@ -79,7 +79,7 @@ class SqliteCardRepository:
             data['updated_at'],
         ))
         self.__conn.commit()
-        return cursor.lastrowid
+        return self.get_card(cursor.lastrowid)
     
     def get_card(self,card_id:int)->Card:
         if not isinstance(card_id,int):
@@ -88,7 +88,7 @@ class SqliteCardRepository:
         SELECT * FROM card WHERE card_id=?
         """,(card_id,)).fetchone()
         if row is None:
-            raise ValueError("Card not found")
+            raise None
         return self.__deserialize_card(row)
 
     def update_card(self,card:Card):
@@ -126,9 +126,9 @@ class SqliteCardRepository:
         if cursor.rowcount==0:
             raise ValueError("Card not found")
         self.__conn.commit()
-        return cursor.rowcount
+        return self.get_card(card.card_id)
 
-    def get_cards_by_note_id(self,note_id:int)->list[Card]:
+    def get_card_by_note_id(self,note_id:int)->list[Card]:
         if not isinstance(note_id,int):
             raise ValueError("Note ID must be an integer")
         rows=self.__conn.execute("""

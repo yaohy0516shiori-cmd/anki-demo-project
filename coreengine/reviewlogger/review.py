@@ -28,7 +28,6 @@ class ReviewLog:
         new_reps:int|None=None,
         old_step_index:int|None=None,
         new_step_index:int|None=None,
-        log_id:int|None=None,
         review_time:str|None=None,
         review_log_id:int | None=None,
         ):

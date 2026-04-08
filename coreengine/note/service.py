@@ -5,13 +5,11 @@ Not responsible for the consistency of underlying objects, that part is entruste
 '''
 from .notemodels import Note
 from .utils import calculate_checksum
-from .repository import InMemoryNoteRepository
 from ..note_type.notetype import NoteType
 from ..note_type.type_registry import get_note_type
-from ..card.service import CardService
 
 class NoteService:
-    def __init__(self, repository_note:InMemoryNoteRepository, card_service:CardService):
+    def __init__(self, repository_note, card_service):
         self.__repository_note = repository_note
         self.__card_service = card_service
    
@@ -40,7 +38,7 @@ class NoteService:
         # get all notes from the repository
         return self.__repository_note.get_all_notes()
 
-    def update_note(self, note_id, deck_id:int, fields=None, tags=None,today=None):
+    def update_note(self, note_id, fields=None, tags=None,today=None, deck_id:int=1):
         # update a note in the repository, fields/tags, refresh, then save to repo
         note = self.__repository_note.get_note(note_id)
         note_type=get_note_type(note.note_type_id)

@@ -1,5 +1,4 @@
-from .repository import ReviewLoggerRepository as review_repo
-from ..card.repository import InMemoryCardRepository as card_repo
+
 from ..scheduler.simple_scheduler import Scheduler_v1 as scheduler
 from .review import ReviewLog
 
@@ -12,7 +11,7 @@ class ReviewLoggerService:
     read card, normalize card data, add review log, 
     ask scheduler for next review time,update card data
     '''
-    def __init__(self, card_repo:card_repo,review_repo:review_repo,scheduler:scheduler):
+    def __init__(self, card_repo,review_repo,scheduler:scheduler):
         self.__card_repo=card_repo
         self.__review_repo=review_repo
         self.__scheduler=scheduler

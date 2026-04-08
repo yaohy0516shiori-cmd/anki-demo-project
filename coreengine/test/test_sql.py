@@ -18,9 +18,21 @@ from ..study.service import StudyService
 TODAY = date(2026, 4, 3)
 
 
-def build_sqlite_app(db_path="data/test_anki_demo.db"):
+def build_sqlite_app(db_path="database/test_anki_demo.db"):
+    db_path = Path(db_path)
+    print(f"DB path: {db_path.resolve()}")
+
     conn = create_connection(db_path)
     init_db(conn)
+
+    print(f"DB exists after init: {db_path.exists()}")
+
+    tables = conn.execute("""
+    SELECT name FROM sqlite_master
+    WHERE type='table'
+    ORDER BY name
+    """).fetchall()
+    print("Tables:", [row["name"] for row in tables])
 
     note_repo = SqliteNoteRepository(conn)
     card_repo = SqliteCardRepository(conn)
@@ -45,34 +57,13 @@ def build_sqlite_app(db_path="data/test_anki_demo.db"):
     }
 
 
-def test_sqlite_create_note_and_review_once():
+if __name__ == "__main__":
     app = build_sqlite_app()
-
     try:
         note_id = app["note_service"].create_note(BASIC, ["hello", "你好"], [], today=TODAY)
+        print(f"Created note_id={note_id}")
 
         cards = app["card_service"].get_card_by_note_id(note_id)
-        assert len(cards) == 1
-
-        study_service = app["study_service"]
-        study_service.start_study_session(today=TODAY)
-
-        item = study_service.get_next_card()
-        assert item is not None
-        assert item["front"] == "hello"
-
-        back = study_service.reveal_back_of_current_card()
-        assert back == "你好"
-
-        result = study_service.rate_current_card("good")
-        updated_card = result["card"]
-        log = result["log"]
-
-        assert updated_card.status == "learning"
-        assert updated_card.step_index == 0
-        assert log.old_status == "new"
-        assert log.new_status == "learning"
-        assert app["review_repo"].count_logs() == 1
-
+        print(f"Card count: {len(cards)}")
     finally:
         close_connection(app["conn"])

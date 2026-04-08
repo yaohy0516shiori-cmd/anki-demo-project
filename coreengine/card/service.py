@@ -1,14 +1,12 @@
-from ..note_type.notetype import NoteType
 from ..note.notemodels import Note
 from .cardmodel import Card
 from datetime import datetime, timezone
 from ..note_type.type_registry import get_note_type
 import re
-from .repository import InMemoryCardRepository
 
 # Generate cards from notes and provide card-level business interfaces.
 class CardService:
-    def __init__(self, card_repo:InMemoryCardRepository):
+    def __init__(self, card_repo):
         self.card_repo = card_repo
 
     def create_cards_from_note(self, note:Note, deck_id:int, today=None):
