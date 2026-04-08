@@ -16,8 +16,8 @@ class SqliteNoteRepository:
             'tags_JSON':json.dumps(note.tags,ensure_ascii=False),
             'sort_field':note.sort_field,
             'checksum':note.checksum,
-            'created_at':note.created_at.isoformat(),
-            'updated_at':note.updated_at.isoformat(),
+            'created_at':note.created_at,
+            'updated_at':note.updated_at,
         }
     
     def __deserialize_note(self,row:sqlite3.Row)->Note:
@@ -28,8 +28,8 @@ class SqliteNoteRepository:
             tags=json.loads(row['tags_JSON']),
             sort_field=row['sort_field'],
             checksum=row['checksum'],
-            created_at=datetime.fromisoformat(row['created_at']),
-            updated_at=datetime.fromisoformat(row['updated_at']),
+            created_at=datetime(row['created_at']),
+            updated_at=datetime(row['updated_at']),
         )
     
     def add_note(self,note:Note):

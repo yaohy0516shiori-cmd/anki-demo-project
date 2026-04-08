@@ -18,9 +18,10 @@ class CardService:
         create_cards = []
         default_today=today if today is not None else datetime.now(timezone.utc).date()
         now=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-        for template_ord in self.get_template_ords(note):
+        for template_ord in self.__get_template_ords(note):
             card=Card(note_id=note.note_id, 
             template_ord=template_ord, 
+            deck_id=note.deck_id,
             status='new',
             due=default_today,
             created_at=now,
@@ -62,7 +63,7 @@ class CardService:
         if note.note_id is None:
             raise ValueError("Note id is required")
         
-        expected_template_ords=self.get_template_ords(note)
+        expected_template_ords=self.__get_template_ords(note)
         expected_template_ords_set=set(expected_template_ords)
         existing_cards=self.get_card_by_note_id(note.note_id)
         existing_by_ord={card.template_ord:card for card in existing_cards}
@@ -80,6 +81,7 @@ class CardService:
             card=Card(
                 note_id=note.note_id,
                 template_ord=template_ord,
+                deck_id=note.deck_id,
                 status='new',
                 due=default_today,
                 created_at=now,

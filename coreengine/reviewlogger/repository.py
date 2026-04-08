@@ -29,7 +29,7 @@ class ReviewLoggerRepository:
             "new_reps": log.new_reps,
             "old_step_index": log.old_step_index,
             "new_step_index": log.new_step_index,
-            "review_time": log.review_time.isoformat(),
+            "review_time": log.review_time,
         }
 
     # Deserialize a review log from a dictionary
@@ -52,7 +52,7 @@ class ReviewLoggerRepository:
             new_reps=data["new_reps"],
             old_step_index=data["old_step_index"],
             new_step_index=data["new_step_index"],
-            review_time=datetime.fromisoformat(data["review_time"]),
+            review_time=datetime(data["review_time"]),
         )
     
     # Add a review log

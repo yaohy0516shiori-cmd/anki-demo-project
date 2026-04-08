@@ -5,7 +5,7 @@ class SqliteReviewLogRepository:
     def __init__(self,conn:sqlite3.Connection):
         self.__conn=conn
 
-    def __serialize_review_log(self,review_log:ReviewLog)->dict:
+    def __serialize_log(self,review_log:ReviewLog)->dict:
         return {
             'card_id':review_log.card_id,
             'rating':review_log.rating,
@@ -26,7 +26,7 @@ class SqliteReviewLogRepository:
             'review_time':review_log.review_time,
         }
     
-    def __deserialize_review_log(self,row:sqlite3.Row)->ReviewLog:
+    def __deserialize_log(self,row:sqlite3.Row)->ReviewLog:
         return ReviewLog(
             review_log_id=row['review_log_id'],
             card_id=row['card_id'],
@@ -48,14 +48,15 @@ class SqliteReviewLogRepository:
             review_time=row['review_time'],
         )
     
-    def add_review_log(self,review_log:ReviewLog):
+    def add_log(self,review_log:ReviewLog):
         if review_log.review_log_id is not None:
             raise ValueError("Review log ID must be None")
-        data=self.__serialize_review_log(review_log)
+        data=self.__serialize_log(review_log)
         cursor=self.__conn.execute(
             """
             INSERT INTO review_log (
             card_id,
+            deck_id,
             rating,
             old_status,
             new_status,
@@ -72,9 +73,10 @@ class SqliteReviewLogRepository:
             old_step_index,
             new_step_index,
             review_time
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (data['card_id'], 
+            data['deck_id'],
             data['rating'], 
             data['old_status'], 
             data['new_status'], 
@@ -95,17 +97,18 @@ class SqliteReviewLogRepository:
         self.__conn.commit()
         return cursor.lastrowid
     
-    def get_review_log(self,review_log_id:int)->ReviewLog:
+    def get_log(self,review_log_id:int)->ReviewLog:
         row=self.__conn.execute("SELECT * FROM review_log WHERE review_log_id=?", (review_log_id,)).fetchone()
         if row:
-            return self.__deserialize_review_log(row)
+            return self.__deserialize_log(row)
         else:
             raise ValueError("Review log not found")
     
-    def update_review_log(self,review_log:ReviewLog):
-        data=self.__serialize_review_log(review_log)
+    def update_log(self,review_log:ReviewLog):
+        data=self.__serialize_log(review_log)
         self.__conn.execute("""
         UPDATE review_log SET card_id=?,
+        deck_id=?,
         rating=?,
         old_status=?,
         new_status=?,
@@ -124,6 +127,7 @@ class SqliteReviewLogRepository:
         review_time=? 
         WHERE review_log_id=?""", 
         (data['card_id'], 
+        data['deck_id'],
         data['rating'], 
         data['old_status'], 
         data['new_status'], 
@@ -143,20 +147,20 @@ class SqliteReviewLogRepository:
         review_log.review_log_id))
         self.__conn.commit()
     
-    def delete_review_log(self,review_log_id:int):
+    def delete_log(self,review_log_id:int):
         pass
 
-    def get_review_logs_by_card_id(self,card_id:int)->list[ReviewLog]:
+    def get_logs_by_card_id(self,card_id:int)->list[ReviewLog]:
         rows=self.__conn.execute("SELECT * FROM review_log WHERE card_id=?", (card_id,)).fetchall()
         self.__conn.commit()
-        return [self.__deserialize_review_log(row) for row in rows]
+        return [self.__deserialize_log(row) for row in rows]
     
-    def get_all_review_logs(self)->list[ReviewLog]:
+    def get_all_logs(self)->list[ReviewLog]:
         rows=self.__conn.execute("SELECT * FROM review_log").fetchall()
         self.__conn.commit()
-        return [self.__deserialize_review_log(row) for row in rows]
+        return [self.__deserialize_log(row) for row in rows]
     
-    def count_review_logs(self)->int:
+    def count_logs(self)->int:
         row=self.__conn.execute("SELECT COUNT(*) FROM review_log").fetchone()
         self.__conn.commit()
         return row[0]

@@ -14,6 +14,7 @@ CREATE INDEX IF NOT EXISTS idx_note_note_type_id ON note (note_type_id,checksum)
 CREATE TABLE IF NOT EXISTS card (
     card_id INTEGER PRIMARY KEY AUTOINCREMENT,
     note_id INTEGER NOT NULL,
+    deck_id INTEGER NOT NULL,
     template_ord INTEGER NOT NULL,
     status TEXT NOT NULL,
     due TEXT NOT NULL, -- when card is generated, there should be a due date

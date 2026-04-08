@@ -20,8 +20,8 @@ class InMemoryCardRepository:
             "reps": card.reps,
             "lapses": card.lapses,
             "step_index": card.step_index,
-            "created_at": card.created_at.isoformat(),
-            "updated_at": card.updated_at.isoformat()
+            "created_at": card.created_at,
+            "updated_at": card.updated_at
         }
 
     def __deserialize_card(self,data:dict):

@@ -11,7 +11,6 @@ class ReviewLog:
     # Construct one review log with old/new state and scheduling fields
     def __init__(
         self,
-        review_log_id:int,
         card_id:int,
         deck_id:int,
         rating:str,
@@ -31,6 +30,7 @@ class ReviewLog:
         new_step_index:int|None=None,
         log_id:int|None=None,
         review_time:str|None=None,
+        review_log_id:int | None=None,
         ):
         if card_id<=0:
             raise ValueError("Card id must be positive")

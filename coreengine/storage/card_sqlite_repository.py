@@ -128,7 +128,7 @@ class SqliteCardRepository:
         self.__conn.commit()
         return cursor.rowcount
 
-    def list_cards_by_note_id(self,note_id:int)->list[Card]:
+    def get_cards_by_note_id(self,note_id:int)->list[Card]:
         if not isinstance(note_id,int):
             raise ValueError("Note ID must be an integer")
         rows=self.__conn.execute("""
@@ -138,7 +138,7 @@ class SqliteCardRepository:
             raise ValueError("Card not found")
         return [self.__deserialize_card(row) for row in rows]
         
-    def get_card_by_note_id_and_ord(self,note_id:int,template_ord:int)->Optional[Card]:
+    def get_cards_by_note_id_and_ord(self,note_id:int,template_ord:int)->Optional[Card]:
         if not isinstance(note_id,int):
             raise ValueError("Note ID must be an integer")
         if not isinstance(template_ord,int):
@@ -180,7 +180,7 @@ class SqliteCardRepository:
         """).fetchone()
         return row[0]
 
-    def delete_card_by_note_id_and_ord(self,note_id:int,template_ord:int):
+    def delete_cards_by_note_id_and_ord(self,note_id:int,template_ord:int):
         if not isinstance(note_id,int):
             raise ValueError("Note ID must be an integer")
         if not isinstance(template_ord,int):
