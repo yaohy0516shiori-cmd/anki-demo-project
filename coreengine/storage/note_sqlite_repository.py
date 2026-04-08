@@ -12,19 +12,19 @@ class SqliteNoteRepository:
         return {
             # note_id is auto incremented
             'note_type_id':note.note_type_id,
-            'fields_JSON':json.dumps(note.field_json,ensure_ascii=False),
-            'tags_JSON':json.dumps(note.tags_json,ensure_ascii=False),
+            'fields_JSON':json.dumps(note.fields,ensure_ascii=False),
+            'tags_JSON':json.dumps(note.tags,ensure_ascii=False),
             'sort_field':note.sort_field,
             'checksum':note.checksum,
-            'created_at':note.created_at,
-            'updated_at':note.updated_at,
+            'created_at':note.created_at.isoformat(),
+            'updated_at':note.updated_at.isoformat(),
         }
     
     def __deserialize_note(self,row:sqlite3.Row)->Note:
         return Note(
             note_id=row['note_id'],
             note_type_id=row['note_type_id'],
-            field=json.loads(row['fields_JSON']),
+            fields=json.loads(row['fields_JSON']),
             tags=json.loads(row['tags_JSON']),
             sort_field=row['sort_field'],
             checksum=row['checksum'],
@@ -33,12 +33,12 @@ class SqliteNoteRepository:
         )
     
     def add_note(self,note:Note):
-        if note.note_id is None:
-            raise ValueError("Note ID is required")
+        if note.note_id is not None:
+            raise ValueError("Note ID must be None")
         data=self.__serialize_note(note)
 
         cursor=self.__conn.execute("""
-        INSERT INTO notes (
+        INSERT INTO note (
             note_type_id,
             fields_JSON,
             tags_JSON,
@@ -66,10 +66,10 @@ class SqliteNoteRepository:
         if not isinstance(note_id,int):
             raise ValueError("Note ID must be an integer")
         row=self.__conn.execute("""
-        SELECT * FROM notes WHERE note_id=?
-        """,(note_id,))
+        SELECT * FROM note WHERE note_id=?
+        """,(note_id,)).fetchone()
         if row is None:
-            return ValueError("Note not found")
+            raise ValueError("Note not found")
         return self.__deserialize_note(row)
     
     def update_note(self,note:Note):
@@ -77,13 +77,12 @@ class SqliteNoteRepository:
             raise ValueError("Note ID is required")
         data=self.__serialize_note(note)
         cursor=self.__conn.execute("""
-            UPDATE notes SET
+            UPDATE note SET
             note_type_id=?,
             fields_JSON=?,
             tags_JSON=?,
             sort_field=?,
             checksum=?,
-            created_at=?,
             updated_at=?
             WHERE note_id=?
         """,(
@@ -92,7 +91,6 @@ class SqliteNoteRepository:
             data['tags_JSON'],
             data['sort_field'],
             data['checksum'],
-            data['created_at'],
             data['updated_at'],
             note.note_id,
         ))
