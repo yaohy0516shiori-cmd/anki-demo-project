@@ -8,13 +8,13 @@ class InMemoryNoteRepository:
     def __serialize_note(self,note:Note):
         # serialize the note to a dictionary
         return {
-            "id": note.note_id,
+            "note_id": note.note_id,
             "note_type_id": note.note_type_id,
             "fields": note.fields,
             "tags": note.tags,
             "sort_field": note.sort_field,
             "checksum": note.checksum,
-            "created_at": note.created_at,
+            "created_at": note.created_at.isoformat(),
             "updated_at": note.updated_at
         }
     
@@ -23,12 +23,12 @@ class InMemoryNoteRepository:
         return Note(
             note_type_id=data["note_type_id"],
             fields=data["fields"],
-            note_id=data["id"],
+            note_id=data["note_id"],
             tags=data["tags"],
             sort_field=data["sort_field"],
             checksum=data["checksum"],
-            created_at=data["created_at"],
-            updated_at=data["updated_at"])
+            created_at=datetime.fromisoformat(data["created_at"]),
+            updated_at=datetime.fromisoformat(data["updated_at"]))
     
     def add_note(self,note:Note):
         # add a note to the repository and assign a new id to the note

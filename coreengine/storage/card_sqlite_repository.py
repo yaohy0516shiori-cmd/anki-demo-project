@@ -1,6 +1,7 @@
 from ..card.cardmodel import Card
 import sqlite3
 from datetime import datetime,date
+from typing import Optional
 
 class SqliteCardRepository:
     def __init__(self,conn:sqlite3.Connection):
@@ -8,23 +9,25 @@ class SqliteCardRepository:
     
     def __serialize_card(self,card:Card)->dict:
         return {
+            'deck_id':card.deck_id,
             'note_id':card.note_id,
             'template_ord':card.template_ord,
             'status':card.status,
-            'due':card.due,
+            'due':card.due.isoformat(),
             'interval':card.interval,
             'ease':card.ease,
             'reps':card.reps,
             'lapses':card.lapses,
             'step_index':card.step_index,
-            'created_at':card.created_at,
-            'updated_at':card.updated_at,
+            'created_at':card.created_at.isoformat(),
+            'updated_at':card.updated_at.isoformat(),
         }
     
     def __deserialize_card(self,row:sqlite3.Row)->Card:
         return Card(
             card_id=row['card_id'],
             note_id=row['note_id'],
+            deck_id=row['deck_id'],
             template_ord=row['template_ord'],
             status=row['status'],
             # make sure that for due, it is a date object, which is a date object
@@ -33,7 +36,7 @@ class SqliteCardRepository:
             ease=row['ease'],
             reps=int(row['reps']),
             lapses=int(row['lapses']),
-            step_index=int(row['step_index']),
+            step_index=row['step_index'],
             # make sure that for created_at and updated_at, it is a datetime object 
             created_at=datetime.fromisoformat(row['created_at']),
             updated_at=datetime.fromisoformat(row['updated_at']),
@@ -48,6 +51,7 @@ class SqliteCardRepository:
         cursor=self.__conn.execute("""
         INSERT INTO card (
             note_id,
+            deck_id,
             template_ord,
             status,
             due,
@@ -58,10 +62,11 @@ class SqliteCardRepository:
             step_index,
             created_at,
             updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             data['note_id'],
+            data['deck_id'],
             data['template_ord'],
             data['status'],
             data['due'],
@@ -93,6 +98,7 @@ class SqliteCardRepository:
         cursor=self.__conn.execute("""
             UPDATE card SET
             note_id=?,
+            deck_id=?,
             template_ord=?,
             status=?,
             due=?,
@@ -105,6 +111,7 @@ class SqliteCardRepository:
             WHERE card_id=?
         """,(
             data['note_id'],
+            data['deck_id'],
             data['template_ord'],
             data['status'],
             data['due'],
@@ -138,9 +145,9 @@ class SqliteCardRepository:
             raise ValueError("Template ord must be an integer")
         row=self.__conn.execute("""
         SELECT * FROM card WHERE note_id=? AND template_ord=?
-        """,(note_id,template_ord))
+        """,(note_id,template_ord)).fetchone()
         if row is None:
-            return ValueError("Card not found")
+            raise ValueError("Card not found")
         return self.__deserialize_card(row)
         
     def list_cards(self):

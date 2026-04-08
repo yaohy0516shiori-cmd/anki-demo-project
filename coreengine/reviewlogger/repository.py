@@ -1,5 +1,6 @@
 from .review import ReviewLog
 from typing import List
+from datetime import datetime
 
 # store review logs in memory
 class ReviewLoggerRepository:
@@ -10,7 +11,7 @@ class ReviewLoggerRepository:
     # Serialize a review log to a dictionary
     def __seralize_log(self, log: ReviewLog) -> dict:
         return {
-            "id": log.log_id,
+            "review_log_id": log.review_log_id,
             "card_id": log.card_id,
             "rating": log.rating,
             "old_status": log.old_status,
@@ -27,13 +28,13 @@ class ReviewLoggerRepository:
             "new_reps": log.new_reps,
             "old_step_index": log.old_step_index,
             "new_step_index": log.new_step_index,
-            "review_time": log.review_time,
+            "review_time": log.review_time.isoformat(),
         }
 
     # Deserialize a review log from a dictionary
     def __deserialize_log(self, data: dict) -> ReviewLog:
         return ReviewLog(
-            log_id=data["id"],
+            review_log_id=data["review_log_id"],
             card_id=data["card_id"],
             rating=data["rating"],
             old_status=data["old_status"],
@@ -50,35 +51,35 @@ class ReviewLoggerRepository:
             new_reps=data["new_reps"],
             old_step_index=data["old_step_index"],
             new_step_index=data["new_step_index"],
-            review_time=data["review_time"],
+            review_time=datetime.fromisoformat(data["review_time"]),
         )
     
     # Add a review log
     def add_log(self, log: ReviewLog):
-        if log.log_id is not None:
+        if log.review_log_id is not None:
             raise ValueError("New Log ID must be None")
-        log.log_id=self.__next_id  # 都不允许输入了为什么不直接在reviewlog里定死log_id=None? 其余同理 比如note_id
+        log.review_log_id=self.__next_id  # 都不允许输入了为什么不直接在reviewlog里定死log_id=None? 其余同理 比如note_id
         self.__next_id+=1
-        self.__logs[log.log_id]=self.__seralize_log(log)
+        self.__logs[log.review_log_id]=self.__seralize_log(log)
 
-        return self.__deserialize_log(self.__logs[log.log_id])
+        return self.__deserialize_log(self.__logs[log.review_log_id])
 
     # Get a review log by id
-    def get_log(self, log_id: int) -> ReviewLog:
-        data=self.__logs.get(log_id)
+    def get_log(self, review_log_id: int) -> ReviewLog:
+        data=self.__logs.get(review_log_id)
         if not data:
             raise ValueError("Log not found")
         return self.__deserialize_log(data)
     
     # Update a review log
     def update_log(self, log: ReviewLog):
-        if log.log_id is None:
+        if log.review_log_id is None:
             raise ValueError("Log ID must be set")
-        self.__logs[log.log_id]=self.__seralize_log(log)
-        return self.__deserialize_log(self.__logs[log.log_id])
+        self.__logs[log.review_log_id]=self.__seralize_log(log)
+        return self.__deserialize_log(self.__logs[log.review_log_id])
     
     # Delete a review log
-    def delete_log(self, log_id: int):
+    def delete_log(self, review_log_id: int):
         pass # 日志能删除吗？
 
     # Get all review logs by card id

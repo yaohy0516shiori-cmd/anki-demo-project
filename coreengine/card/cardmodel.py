@@ -9,6 +9,7 @@ class Card:
     def __init__(
         self,
         note_id:int,
+        deck_id:int,
         template_ord:int,
         card_id:int | None=None,
         status:str='new',
@@ -41,6 +42,7 @@ class Card:
 
         self.note_id=note_id
         self.template_ord=template_ord
+        self.deck_id=deck_id
         self.card_id=card_id
         self.status=status # new, learning, review, relearning
         self.due=due if due is not None else datetime.now(timezone.utc).date()

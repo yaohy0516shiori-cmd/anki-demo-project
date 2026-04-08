@@ -9,26 +9,28 @@ class InMemoryCardRepository:
     def __serialize_card(self,card:Card):
         # serialize the card to a dictionary
         return {
-            "id": card.card_id,
+            "card_id": card.card_id,
+            "deck_id": card.deck_id,
             "note_id": card.note_id,
             "template_ord": card.template_ord,
             "status": card.status,
-            "due": card.due,
+            "due": card.due.isoformat(),
             "interval": card.interval,
             "ease": card.ease,
             "reps": card.reps,
             "lapses": card.lapses,
             "step_index": card.step_index,
-            "created_at": card.created_at,
-            "updated_at": card.updated_at
+            "created_at": card.created_at.isoformat(),
+            "updated_at": card.updated_at.isoformat()
         }
 
     def __deserialize_card(self,data:dict):
         # deserialize the card from a dictionary
         return Card(
             note_id=data["note_id"],
+            deck_id=data["deck_id"],
             template_ord=data["template_ord"],
-            card_id=data["id"],
+            card_id=data["card_id"],
             status=data["status"],
             due=data["due"],
             interval=data["interval"],

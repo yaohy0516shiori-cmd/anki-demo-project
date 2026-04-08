@@ -12,6 +12,7 @@ class ReviewLog:
     def __init__(
         self,
         card_id:int,
+        deck_id:int,
         rating:str,
         old_status:str,
         new_status:str,
@@ -52,5 +53,5 @@ class ReviewLog:
         self.new_reps=new_reps
         self.old_step_index=old_step_index
         self.new_step_index=new_step_index
-        self.log_id=log_id
+        self.review_log_id=review_log_id
         self.review_time=normalize_datetime_value(review_time) if review_time else now

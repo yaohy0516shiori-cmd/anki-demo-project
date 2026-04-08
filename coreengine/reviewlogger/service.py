@@ -50,6 +50,7 @@ class ReviewLoggerService:
 
         log=ReviewLog(
             card_id=updated_card.card_id,
+            deck_id=updated_card.deck_id,
             rating=normalized_card,
             old_status=old_status,
             new_status=updated_card.status,
