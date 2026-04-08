@@ -19,8 +19,8 @@ class SqliteCardRepository:
             'reps':card.reps,
             'lapses':card.lapses,
             'step_index':card.step_index,
-            'created_at':card.created_at.isoformat(),
-            'updated_at':card.updated_at.isoformat(),
+            'created_at':card.created_at,
+            'updated_at':card.updated_at,
         }
     
     def __deserialize_card(self,row:sqlite3.Row)->Card:
@@ -31,15 +31,15 @@ class SqliteCardRepository:
             template_ord=row['template_ord'],
             status=row['status'],
             # make sure that for due, it is a date object, which is a date object
-            due=date.fromisoformat(row['due']),
+            due=date(row['due']),
             interval=int(row['interval']),
             ease=row['ease'],
             reps=int(row['reps']),
             lapses=int(row['lapses']),
-            step_index=row['step_index'],
+            step_index=int(row['step_index']) if row['step_index'] is not None else None,
             # make sure that for created_at and updated_at, it is a datetime object 
-            created_at=datetime.fromisoformat(row['created_at']),
-            updated_at=datetime.fromisoformat(row['updated_at']),
+            created_at=row['created_at'],
+            updated_at=row['updated_at'],
         )
     
     def add_card(self,card:Card):

@@ -37,6 +37,7 @@ class ReviewLoggerRepository:
         return ReviewLog(
             review_log_id=data["review_log_id"],
             card_id=data["card_id"],
+            deck_id=data["deck_id"],
             rating=data["rating"],
             old_status=data["old_status"],
             new_status=data["new_status"],
@@ -52,7 +53,7 @@ class ReviewLoggerRepository:
             new_reps=data["new_reps"],
             old_step_index=data["old_step_index"],
             new_step_index=data["new_step_index"],
-            review_time=datetime(data["review_time"]),
+            review_time=data["review_time"],
         )
     
     # Add a review log

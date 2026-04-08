@@ -27,8 +27,8 @@ class InMemoryNoteRepository:
             tags=data["tags"],
             sort_field=data["sort_field"],
             checksum=data["checksum"],
-            created_at=datetime(data["created_at"]),
-            updated_at=datetime(data["updated_at"]))
+            created_at=data["created_at"],
+            updated_at=data["updated_at"])
     
     def add_note(self,note:Note):
         # add a note to the repository and assign a new id to the note

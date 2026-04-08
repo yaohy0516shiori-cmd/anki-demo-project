@@ -8,6 +8,7 @@ class SqliteReviewLogRepository:
     def __serialize_log(self,review_log:ReviewLog)->dict:
         return {
             'card_id':review_log.card_id,
+            'deck_id':review_log.deck_id,
             'rating':review_log.rating,
             'old_status':review_log.old_status,
             'new_status':review_log.new_status,
@@ -30,6 +31,7 @@ class SqliteReviewLogRepository:
         return ReviewLog(
             review_log_id=row['review_log_id'],
             card_id=row['card_id'],
+            deck_id=row['deck_id'],
             rating=row['rating'],
             old_status=row['old_status'],
             new_status=row['new_status'],

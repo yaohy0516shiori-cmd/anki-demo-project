@@ -11,7 +11,7 @@ class CardService:
     def __init__(self, card_repo:InMemoryCardRepository):
         self.card_repo = card_repo
 
-    def create_cards_from_note(self, note:Note, today=None):
+    def create_cards_from_note(self, note:Note, deck_id:int, today=None):
         # Decide how many cards to generate from a note and save them
         if note.note_id is None:
             raise ValueError("Note id is required")
@@ -21,7 +21,7 @@ class CardService:
         for template_ord in self.__get_template_ords(note):
             card=Card(note_id=note.note_id, 
             template_ord=template_ord, 
-            deck_id=note.deck_id,
+            deck_id=deck_id,
             status='new',
             due=default_today,
             created_at=now,
@@ -58,7 +58,7 @@ class CardService:
         # delete all cards generated from a note
         return self.card_repo.delete_cards_by_note_id(note_id)
     
-    def reconcile_cards_for_note(self, note:Note, today=None):
+    def reconcile_cards_for_note(self, note:Note, deck_id:int, today=None):
         # synchronize existing cards with current note fields
         if note.note_id is None:
             raise ValueError("Note id is required")
@@ -81,7 +81,7 @@ class CardService:
             card=Card(
                 note_id=note.note_id,
                 template_ord=template_ord,
-                deck_id=note.deck_id,
+                deck_id=deck_id,
                 status='new',
                 due=default_today,
                 created_at=now,

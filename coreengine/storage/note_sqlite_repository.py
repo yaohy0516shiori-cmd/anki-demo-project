@@ -28,8 +28,8 @@ class SqliteNoteRepository:
             tags=json.loads(row['tags_JSON']),
             sort_field=row['sort_field'],
             checksum=row['checksum'],
-            created_at=datetime(row['created_at']),
-            updated_at=datetime(row['updated_at']),
+            created_at=row['created_at'],
+            updated_at=row['updated_at'],
         )
     
     def add_note(self,note:Note):

@@ -1,5 +1,5 @@
 from .cardmodel import Card
-
+from datetime import date
 # Store cards in memory. will be replaced by database in the future
 class InMemoryCardRepository:
     def __init__(self):
@@ -32,7 +32,7 @@ class InMemoryCardRepository:
             template_ord=data["template_ord"],
             card_id=data["card_id"],
             status=data["status"],
-            due=data["due"],
+            due=date.fromisoformat(data["due"]),
             interval=data["interval"],
             ease=data["ease"],
             reps=data["reps"],
