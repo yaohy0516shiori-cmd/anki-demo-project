@@ -11,6 +11,7 @@ class ReviewLog:
     # Construct one review log with old/new state and scheduling fields
     def __init__(
         self,
+        review_log_id:int,
         card_id:int,
         deck_id:int,
         rating:str,
@@ -38,6 +39,7 @@ class ReviewLog:
         now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
         self.card_id=card_id
+        self.deck_id=deck_id
         self.rating=rating
         self.old_status=old_status
         self.new_status=new_status

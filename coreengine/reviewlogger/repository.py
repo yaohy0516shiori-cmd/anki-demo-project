@@ -13,6 +13,7 @@ class ReviewLoggerRepository:
         return {
             "review_log_id": log.review_log_id,
             "card_id": log.card_id,
+            "deck_id": log.deck_id,
             "rating": log.rating,
             "old_status": log.old_status,
             "new_status": log.new_status,
