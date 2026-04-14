@@ -72,8 +72,8 @@ class ReviewLoggerService:
         return {'log':saved_log,'card':updated_card}
 
     # Get all review logs history by card id
-    def get_review_log_history(self, card_id: int):
-        return self.__review_repo.get_log_by_card_id(card_id)
+    def get_review_logs_history(self, card_id: int):
+        return self.__review_repo.get_logs_by_card_id(card_id)
     
     # Normalize user input rating to a standardized format
     def __normalize_rating(self, rating:str) -> str:

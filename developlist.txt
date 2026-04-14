@@ -1,0 +1,280 @@
+Deck 这条线的改动清单
+1. 先补 deck 模块本体
+需要新增的文件
+coreengine/deck/deckmodel.py
+coreengine/deck/repository.py
+coreengine/deck/service.py
+coreengine/deck/__init__.py
+这一条要完成的目标
+
+先让系统里正式存在一个 Deck 实体，而不是只有 card.deck_id 这个裸字段。
+
+这一条结束后的结果
+
+你应该能回答这三个问题：
+
+deck 长什么样
+deck 由谁存
+deck 由谁做增删改查
+2. 定义 Deck model
+文件
+coreengine/deck/deckmodel.py
+需要明确的内容
+
+Deck 至少要有这些字段：
+
+deck_id
+deck_name
+description（可选，你的 design 里提到过 topic/description 这一类说明）
+created_at
+updated_at
+这一条为什么先做
+
+因为后面的 repository、service、SQLite 表结构都要围绕这个 model 来写。
+不先定 model，后面每一层都会反复改。
+
+3. 定义 Deck repository contract
+文件
+coreengine/deck/repository.py
+需要明确的接口
+
+先只定接口，不实现。最小 V1 建议有：
+
+add_deck(deck)
+get_deck(deck_id)
+list_decks()
+update_deck(deck)
+delete_deck(deck_id)
+这里要先想清楚的规则
+删除 deck 时，里面的 card 怎么办
+是否允许重名
+是否必须保留一个 default deck
+我建议的 V1 规则
+允许重名先不做
+必须保留 default deck
+删除非 default deck 时，先不允许直接删，或者要求先把 card 移走
+
+因为这能避免一开始就碰“删 deck 后 card 悬空”问题。
+
+4. 定义 Deck service
+文件
+coreengine/deck/service.py
+需要明确的职责
+
+service 负责业务规则，不直接存数据。最小 V1 先做：
+
+create deck
+get deck
+list decks
+rename / update deck
+delete deck
+这里要加的业务判断
+deck name 不能为空
+default deck 不能随便删
+查不到 deck 要报明确错误
+这一条结束后的结果
+
+以后所有 deck 操作都不直接碰 repository，而是统一从 DeckService 进。
+
+5. 在 SQLite 里补 deck 表
+文件
+coreengine/storage/schema.sql
+需要新增
+
+新增 deck 表。
+
+需要同步考虑的点
+deck_id 主键
+deck_name
+description
+created_at
+updated_at
+还要一起改的地方
+
+给 card.deck_id 补外键约束，连到 deck.deck_id。
+
+为什么这一步要尽早做
+
+因为你后面一旦开始让 card 真正归属 deck，数据库层必须先承认 deck 存在。
+
+6. 初始化 default deck
+文件
+coreengine/storage/schema.sql 或初始化逻辑所在位置
+需要补的内容
+
+系统初始化时自动有一个 default deck。
+
+建议规则
+deck_id = 1
+deck_name = "Default"
+为什么
+
+你现在很多地方默认写了 deck_id=1。
+如果数据库里根本没有这条 deck，后面外键一加就全报错。
+
+7. 写 SQLite Deck repository
+文件
+coreengine/storage/deck_sqlite_repository.py
+需要实现的内容
+
+把前面 deck/repository.py 定下来的接口真正落到 SQLite。
+
+这一条的目标
+
+保证 deck 在持久层可增删改查。
+
+这里要特别注意
+
+返回值语义要和 in-memory 版本未来保持一致：
+
+add_deck() 返回 Deck
+get_deck() 返回 Deck
+list_decks() 返回 list[Deck]
+update_deck() 返回更新后的 Deck
+delete_deck() 返回成功/失败，或者直接抛异常
+
+不要一个 repo 返回 id，一个 repo 返回对象。
+
+8. 给 card repository 增加按 deck 查询能力
+文件
+coreengine/card/repository.py
+coreengine/storage/card_sqlite_repository.py
+需要新增的接口
+
+最少先补：
+
+get_cards_by_deck_id(deck_id)
+get_due_cards_by_deck_id(deck_id, today)
+为什么
+
+因为 study session 不是“全系统开学”，而是“从某个 deck 开学”。
+
+9. 给 in-memory card repository 同步补同样接口
+文件
+coreengine/card/repository.py
+需要补的内容
+
+和 SQLite 一样，补：
+
+get_cards_by_deck_id(deck_id)
+get_due_cards_by_deck_id(deck_id, today)
+为什么
+
+你后面测试和开发肯定还会先走 in-memory。
+如果两个 repo 接口不一致，后面又会重复踩坑。
+
+10. 给 CardService 补 deck 相关操作
+文件
+coreengine/card/service.py
+需要新增的业务动作
+
+最小 V1 建议有：
+
+查看某个 deck 下的全部卡
+把 card 分配到 deck
+把 card 从一个 deck 移到另一个 deck
+这里要明确一条原则
+
+deck 归属最终落在 card 上，不落在 note 上。
+
+这条你前面其实已经抓得很对：
+
+note 决定 card 生成
+但 deck 决定 card 被组织到哪里学习
+11. 把 StudyService 改成 deck-aware
+文件
+coreengine/study/service.py
+需要改的函数
+start_study_session()
+要改成什么语义
+
+从：
+
+全局扫描所有 card
+
+改成：
+
+只从指定 deck_id 取卡开始 session
+这一条要实现的结果
+
+以后入口会变成：
+
+先选 deck
+再 start session
+session 里只出现该 deck 的卡
+12. 明确 deck 删除规则
+文件
+coreengine/deck/service.py
+未来可能影响 card/service.py
+这里必须先定规则，不然以后会反复改
+
+我建议 V1 先用最稳的规则：
+
+规则 A
+
+default deck 不允许删除
+
+规则 B
+
+非空 deck 不允许直接删除
+或者删除前先把里面的 card 移到 default deck
+
+我更推荐
+
+V1 先做：
+
+有 card 的 deck 不允许删除
+
+因为这样业务最简单，边界最清晰。
+
+13. 补 deck 相关测试
+文件
+
+建议新增：
+
+coreengine/test/test_deck.py
+最少要覆盖的用例
+create deck
+list decks
+get deck
+rename deck
+delete empty deck
+delete default deck should fail
+get missing deck should fail
+后续第二层测试
+
+等 card / study 接上以后再补：
+
+assign card to deck
+move card between decks
+start study session from selected deck
+这一轮只做到哪里最合适
+
+你说“根据我的指令一条一条来改”，那最合理的第一步就是先停在这里：
+
+第一条正式改动目标
+
+先做第 1～4 条：把 deck 的 domain 层定下来
+也就是：
+
+新建 deck/ 模块
+定 Deck model
+定 Deck repository 接口
+定 Deck service 职责和规则
+
+先不碰 SQLite，不碰 card，不碰 study。
+
+你接下来一条一条改时的顺序
+
+建议严格按这个顺序走：
+
+deckmodel.py
+deck/repository.py
+deck/service.py
+schema.sql 增加 deck 表
+deck_sqlite_repository.py
+card repository 加按 deck 查询
+card service 加 deck 分配/移动
+study service 改为从 deck 开 session
+test_deck.py
+deck-card-study 集成测试

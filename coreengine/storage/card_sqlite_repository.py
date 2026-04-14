@@ -88,7 +88,7 @@ class SqliteCardRepository:
         SELECT * FROM card WHERE card_id=?
         """,(card_id,)).fetchone()
         if row is None:
-            raise None
+            raise ValueError("Card not found")
         return self.__deserialize_card(row)
 
     def update_card(self,card:Card):
@@ -135,7 +135,7 @@ class SqliteCardRepository:
         SELECT * FROM card WHERE note_id=?
         """,(note_id,)).fetchall()
         if len(rows)==0:
-            raise ValueError("Card not found")
+            return []
         return [self.__deserialize_card(row) for row in rows]
         
     def get_cards_by_note_id_and_ord(self,note_id:int,template_ord:int)->Optional[Card]:
@@ -147,7 +147,7 @@ class SqliteCardRepository:
         SELECT * FROM card WHERE note_id=? AND template_ord=?
         """,(note_id,template_ord)).fetchone()
         if row is None:
-            raise ValueError("Card not found")
+            return []
         return self.__deserialize_card(row)
         
     def list_cards(self):
@@ -165,7 +165,7 @@ class SqliteCardRepository:
         if cursor.rowcount==0:
             raise ValueError("Card not found")
         self.__conn.commit()
-        return cursor.rowcount
+        return f"Deleted {cursor.rowcount} cards successfully"
     
     def clear_cards(self):
         self.__conn.execute("""
@@ -191,7 +191,7 @@ class SqliteCardRepository:
         if cursor.rowcount==0:
             raise ValueError("Card not found")
         self.__conn.commit()
-        return cursor.rowcount
+        return f"Deleted {cursor.rowcount} cards successfully"
     
     def delete_card(self,card_id:int):
         if not isinstance(card_id,int):
@@ -202,6 +202,7 @@ class SqliteCardRepository:
         if cursor.rowcount==0:
             raise ValueError("Card not found")
         self.__conn.commit()
+        return f"Deleted {cursor.rowcount} card successfully"
     
     def list_all_cards(self)->list[Card]:
         rows=self.__conn.execute("""

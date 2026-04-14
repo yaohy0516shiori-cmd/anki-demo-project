@@ -7,25 +7,30 @@ from .notemodels import Note
 from .utils import calculate_checksum
 from ..note_type.notetype import NoteType
 from ..note_type.type_registry import get_note_type
+from ..storage.note_sqlite_repository import SqliteNoteRepository
+from ..card.service import CardService
 
 class NoteService:
-    def __init__(self, repository_note, card_service):
+    def __init__(self, repository_note:SqliteNoteRepository, card_service:CardService):
         self.__repository_note = repository_note
         self.__card_service = card_service
    
-    def create_note(self, note_type, fields,deck_id:int, tags=None,note_id=None,today=None):
+    def create_note(self, note_type, fields,deck_id=0, tags=None,note_id=None,today=None):
         # create a note: validate, deduplicate, construct Note, save to repo
+        # deck_id is 0 by default, if deck_id is not set, the note will be created in the default deck
+        if not isinstance(deck_id, int) or deck_id < 0:
+            raise ValueError("Deck id is not an integer or is not positive")
         tags=tags if tags is not None else []
         self.__validate_fields(note_type, fields)
         if self.is_duplicate(fields,note_type.note_type_id,note_id):
             raise ValueError("The note is duplicate")
 
-        note=Note(note_type_id=note_type.note_type_id, fields=fields, tags=tags)
+        note=Note(note_type_id=note_type.note_type_id, fields=fields, tags=tags, deck_id=deck_id)
         saved_note_id = self.__repository_note.add_note(note)
         saved_note = self.__repository_note.get_note(saved_note_id)
 
         if self.__card_service is not None:
-            self.__card_service.reconcile_cards_for_note(saved_note,deck_id=deck_id,today=today)
+            self.__card_service.create_cards_from_note(saved_note,deck_id=deck_id,today=today)
 
         return saved_note_id
 

@@ -96,8 +96,9 @@ class SqliteReviewLogRepository:
             data['new_step_index'], 
             data['review_time'])
             )
+        log_id=cursor.lastrowid
         self.__conn.commit()
-        return cursor.lastrowid
+        return self.get_log(log_id)
     
     def get_log(self,review_log_id:int)->ReviewLog:
         row=self.__conn.execute("SELECT * FROM review_log WHERE review_log_id=?", (review_log_id,)).fetchone()

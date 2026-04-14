@@ -37,6 +37,7 @@ class Note:
     fields:List[str]
     note_id:Optional[int]=None
     tags:List=field(default_factory=list)
+    deck_id:Optional[int]=None
     sort_field:Optional[str]=None
     checksum:Optional[str]=None
     created_at:Optional[str]=None
@@ -57,6 +58,9 @@ class Note:
             
         if self.checksum is None:
             self.checksum=calculate_checksum(self.fields)
+
+        if not isinstance(self.deck_id, int) or self.deck_id < 0:
+            raise ValueError("Deck id is not an integer or is not positive")
 
         now=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
         # if the created_at and updated_at are not set, set them to the current time

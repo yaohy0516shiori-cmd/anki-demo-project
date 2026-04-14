@@ -98,7 +98,7 @@ class SqliteNoteRepository:
         if cursor.rowcount==0:
             raise ValueError("Note not found")
         self.__conn.commit()
-        return cursor.rowcount
+        return note.note_id
     
     def delete_note(self,note_id:int):
         if not isinstance(note_id, int):
