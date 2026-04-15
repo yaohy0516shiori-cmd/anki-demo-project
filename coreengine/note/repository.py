@@ -12,11 +12,11 @@ class InMemoryNoteRepository:
             "note_type_id": note.note_type_id,
             "fields": note.fields,
             "tags": note.tags,
-            "deck_id": note.deck_id,
             "sort_field": note.sort_field,
             "checksum": note.checksum,
             "created_at": note.created_at,
-            "updated_at": note.updated_at
+            "updated_at": note.updated_at,
+            "hint": note.hint
         }
     
     def __deserialize_note(self,data:dict):
@@ -26,11 +26,11 @@ class InMemoryNoteRepository:
             fields=data["fields"],
             note_id=data["note_id"],
             tags=data["tags"],
-            deck_id=data["deck_id"],
             sort_field=data["sort_field"],
             checksum=data["checksum"],
             created_at=data["created_at"],
-            updated_at=data["updated_at"])
+            updated_at=data["updated_at"],
+            hint=data["hint"])
     
     def add_note(self,note:Note):
         # add a note to the repository and assign a new id to the note

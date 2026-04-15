@@ -9,7 +9,6 @@ class Card:
     def __init__(
         self,
         note_id:int,
-        deck_id:int,
         template_ord:int,
         card_id:int | None=None,
         status:str='new',
@@ -20,7 +19,8 @@ class Card:
         lapses: int=0,
         step_index: int |None=None,
         created_at:str | None=None,
-        updated_at:str | None=None
+        updated_at:str | None=None,
+        deck_id:int | None=None
         ):
         # Initialize scheduling-related fields
         if note_id <=0:
@@ -43,7 +43,7 @@ class Card:
         now=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
         self.note_id=note_id
-        self.deck_id=deck_id
+        self.deck_id=deck_id if deck_id is not None else 1
         self.template_ord=template_ord
         self.card_id=card_id
         self.status=status # new, learning, review, relearning

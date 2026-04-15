@@ -18,6 +18,7 @@ class SqliteNoteRepository:
             'checksum':note.checksum,
             'created_at':note.created_at,
             'updated_at':note.updated_at,
+            'hint':note.hint,
         }
     
     def __deserialize_note(self,row:sqlite3.Row)->Note:
@@ -30,6 +31,7 @@ class SqliteNoteRepository:
             checksum=row['checksum'],
             created_at=row['created_at'],
             updated_at=row['updated_at'],
+            hint=row['hint'],
         )
     
     def add_note(self,note:Note):
@@ -45,9 +47,10 @@ class SqliteNoteRepository:
             sort_field,
             checksum,
             created_at,
-            updated_at
+            updated_at,
+            hint
         ) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             data['note_type_id'],
@@ -57,6 +60,7 @@ class SqliteNoteRepository:
             data['checksum'],
             data['created_at'],
             data['updated_at'],
+            data['hint'],
         )
         )
         self.__conn.commit()
@@ -83,7 +87,8 @@ class SqliteNoteRepository:
             tags_JSON=?,
             sort_field=?,
             checksum=?,
-            updated_at=?
+            updated_at=?,
+            hint=?
             WHERE note_id=?
         """,(
             data['note_type_id'],
@@ -92,6 +97,7 @@ class SqliteNoteRepository:
             data['sort_field'],
             data['checksum'],
             data['updated_at'],
+            data['hint'],
             note.note_id,
         ))
 
