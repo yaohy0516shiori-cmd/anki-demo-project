@@ -132,3 +132,20 @@ class InMemoryCardRepository:
     get_cards_by_state(state)
     get_due_cards(today)
     '''
+    def get_cards_by_deck_id(self,deck_id:int):
+        # get all cards from the repository by deck id
+        result=[]
+        for data in self.__cards.values():
+            if data["deck_id"] == deck_id:
+                result.append(self.__deserialize_card(data))
+        result.sort(key=lambda card: card.card_id)
+        return result
+
+    def move_cards_to_deck(self,from_deck_id:int,to_deck_id:int):
+        # move all cards to a new deck
+        move_cards=[]
+        for card in self.get_cards_by_deck_id(from_deck_id):
+            card.deck_id=to_deck_id
+            card.touch()
+            move_cards.append(self.update_card(card))
+        return move_cards

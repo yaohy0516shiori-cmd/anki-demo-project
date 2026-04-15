@@ -17,6 +17,14 @@ class DeckService:
         return self.__repository_deck.update_deck(deck)
 
     def delete_deck(self, deck_id:int):
+        deck=self.__repository_deck.get_deck(deck_id)
+        
+        if self.__repository_deck.is_default_deck(deck_id):
+            raise ValueError("Default deck cannot be deleted")
+
+        default_deck=self.__repository_deck.get_default_deck()
+
+        self.__card_service.move_cards_to_deck(deck.deck_id, default_deck.deck_id)
         return self.__repository_deck.delete_deck(deck_id)
     
     def get_all_decks(self):
@@ -24,4 +32,10 @@ class DeckService:
     
     def get_all_decks_ids(self):
         return self.__repository_deck.get_all_decks_ids()
+    
+    def get_cards_by_deck_id(self, deck_id:int):
+        return self.__card_service.get_cards_by_deck_id(deck_id)
+    
+    def move_cards_to_deck(self, from_deck_id:int, to_deck_id:int):
+        return self.__card_service.move_cards_to_deck(from_deck_id, to_deck_id)
     

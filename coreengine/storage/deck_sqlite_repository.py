@@ -1,3 +1,6 @@
+import sqlite3
+from ..deck.deckmodel import Deck
+
 class SqliteDeckRepository:
     def __init__(self, conn:sqlite3.Connection):
         self.__conn=conn

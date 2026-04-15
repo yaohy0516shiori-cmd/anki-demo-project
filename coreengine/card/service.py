@@ -110,3 +110,15 @@ class CardService:
             return [0, 1]
         else:
             raise ValueError(f"unsupported note type kind: {note_type.kind}")
+    
+    def get_cards_by_deck_id(self, deck_id: int):
+        if deck_id <= 0:
+            raise ValueError("Deck id must be positive")
+        return self.card_repo.get_cards_by_deck_id(deck_id)
+
+    def move_cards_to_deck(self, from_deck_id: int, to_deck_id: int):
+        if from_deck_id <= 0 or to_deck_id <= 0:
+            raise ValueError("Deck id must be positive")
+        if from_deck_id == to_deck_id:
+            return []
+        return self.card_repo.move_cards_to_deck(from_deck_id, to_deck_id)

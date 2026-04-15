@@ -1,3 +1,17 @@
+CREATE TABLE IF NOT EXISTS deck (
+    deck_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    deck_name TEXT NOT NULL,
+    deck_description TEXT NOT NULL,
+    deck_created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deck_updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+-- index on deck_name used for search decks by deck_name
+CREATE INDEX IF NOT EXISTS idx_deck_deck_name ON deck (deck_name);
+-- index on deck_created_at used for search decks by deck_created_at
+CREATE INDEX IF NOT EXISTS idx_deck_deck_created_at ON deck (deck_created_at);
+-- index on deck_updated_at used for search decks by deck_updated_at
+CREATE INDEX IF NOT EXISTS idx_deck_deck_updated_at ON deck (deck_updated_at);
+
 CREATE TABLE IF NOT EXISTS note (
     note_id INTEGER PRIMARY KEY AUTOINCREMENT,
     note_type_id INTEGER NOT NULL,
@@ -54,8 +68,10 @@ CREATE TABLE IF NOT EXISTS review_log (
     new_step_index INTEGER,
     review_time TEXT NOT NULL,
     FOREIGN KEY (card_id) REFERENCES card (card_id) ON DELETE CASCADE
+    FOREIGN KEY (deck_id) REFERENCES deck (deck_id) ON DELETE CASCADE
 );
 -- index on card_id used for search review logs by card_id
 CREATE INDEX IF NOT EXISTS idx_review_log_card_id ON review_log (card_id);
 -- index on review_time used for search review logs by review_time
 CREATE INDEX IF NOT EXISTS idx_review_log_card_time ON review_log (card_id,review_time);
+

@@ -4,29 +4,19 @@ from datetime import datetime, timezone
 class InmemoryDeckRepository:
     def __init__(self):
         self.__decks={
-            0:Deck(deck_id=0, deck_name="Default Deck", deck_description="Default Deck").to_dict()
+            1:Deck(deck_id=1, deck_name="Default Deck", deck_description="System Default Deck").to_dict()
         }
-        self.__next_id=1
+        self.__next_id=2
     
-    def __serialize_deck(self,deck):
-        return {
-            'deck_id': deck.deck_id,
-            'deck_name': deck.deck_name,
-            'deck_description': deck.deck_description,
-            'deck_created_at': deck.deck_created_at,
-            'deck_updated_at': deck.deck_updated_at
-        }
+    def __serialize_deck(self,deck:Deck):
+        return deck.to_dict()
     
     def __deserialize_deck(self,data):
-        return Deck(
-            deck_id=data['deck_id'],
-            deck_name=data['deck_name'],
-            deck_description=data['deck_description'],
-            deck_created_at=data['deck_created_at'],
-            deck_updated_at=data['deck_updated_at']
-        )
+        return Deck.from_dict(data)
     
     def create_deck(self, deck:Deck):
+        if deck.deck_id in self.__decks:
+            raise ValueError("Deck already exists")
         if deck.deck_id is not None :
             raise ValueError("New Deck's id should be None")
         deck.deck_id=self.__next_id
@@ -42,19 +32,26 @@ class InmemoryDeckRepository:
     def update_deck(self, deck:Deck):
         if deck.deck_id is None:
             raise ValueError("Update Deck's id should not be None")
-        if self.__decks[deck.deck_id] is None:
+        if deck.deck_id not in self.__decks:
             raise ValueError("Deck not found")
-        self.__decks[deck.deck_id]=self.__serialize_deck(deck)
+        old=self.__decks[deck.deck_id]
+        update=Deck(
+            deck_id= deck.deck_id,
+            deck_name= deck.deck_name,
+            deck_description= deck.deck_description,
+            deck_updated_at= deck.deck_updated_at,
+            deck_created_at= old["deck_created_at"]
+            )
+        self.__decks[deck.deck_id]=self.__serialize_deck(update)
         return self.__deserialize_deck(self.__decks[deck.deck_id])
-    
+        
     def delete_deck(self, deck_id:int):
         if deck_id not in self.__decks:
             raise ValueError("Deck not found")
-        if deck_id == 0:
+        if deck_id == 1:
             raise ValueError("Default deck cannot be deleted")
         del self.__decks[deck_id]
         return deck_id
-    
     
     def get_all_decks(self):
         return [self.__deserialize_deck(deck) for deck in self.__decks.values()]
@@ -63,5 +60,27 @@ class InmemoryDeckRepository:
         return list(self.__decks.keys())
 
     def get_default_deck(self):
-        return self.__deserialize_deck(self.__decks[0])
+        return self.__deserialize_deck(self.__decks[1])
     
+    def get_default_deck_id(self):
+        return 1
+    
+    def is_default_deck(self, deck_id:int):
+        return deck_id == 1
+    
+    def clear_decks(self):
+        self.__decks={
+            1:Deck(deck_id=1, deck_name="Default Deck", deck_description="System Default Deck").to_dict()
+        }
+        self.__next_id=2
+    
+    def get_deck_by_id(self, deck_id:int):
+        if deck_id not in self.__decks:
+            raise ValueError("Deck not found")
+        return self.__deserialize_deck(self.__decks[deck_id])
+    
+    def get_deck_by_name(self, deck_name:str):
+        for deck in self.__decks.values():
+            if deck["deck_name"] == deck_name:
+                return self.__deserialize_deck(deck)
+        raise ValueError("Deck not found")
