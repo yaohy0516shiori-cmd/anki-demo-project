@@ -42,6 +42,8 @@ class InmemoryDeckRepository:
     def update_deck(self, deck:Deck):
         if deck.deck_id is None:
             raise ValueError("Update Deck's id should not be None")
+        if self.__decks[deck.deck_id] is None:
+            raise ValueError("Deck not found")
         self.__decks[deck.deck_id]=self.__serialize_deck(deck)
         return self.__deserialize_deck(self.__decks[deck.deck_id])
     
@@ -59,4 +61,7 @@ class InmemoryDeckRepository:
     
     def get_all_decks_ids(self):
         return list(self.__decks.keys())
+
+    def get_default_deck(self):
+        return self.__deserialize_deck(self.__decks[0])
     

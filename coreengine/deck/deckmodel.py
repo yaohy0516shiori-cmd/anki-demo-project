@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 class Deck:
     def __init__(
         self, 
-        deck_id: int, 
+        deck_id: int | None=None, 
         deck_name:str | None=None, 
         deck_description:str | None=None, 
         deck_created_at:str | None=None, 
@@ -12,8 +12,8 @@ class Deck:
         if not isinstance(deck_id, int) or deck_id < 0:
             raise ValueError("Deck id is not an integer or is not positive")
         now=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-        self.deck_id=deck_id
         self.deck_name=deck_name if deck_name is not None else f"Deck {deck_id}"
+        self.deck_id=deck_id
         self.deck_description=str(deck_description) if deck_description is not None else ""
         self.deck_created_at=deck_created_at if deck_created_at is not None else now
         self.deck_updated_at=deck_updated_at if deck_updated_at is not None else now

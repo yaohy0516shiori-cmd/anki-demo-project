@@ -1,9 +1,11 @@
 from .repository import InmemoryDeckRepository
 from .deckmodel import Deck
+from ..card.service import CardService
 
 class DeckService:
-    def __init__(self, repository_deck:InmemoryDeckRepository):
+    def __init__(self, repository_deck:InmemoryDeckRepository,card_service:CardService):
         self.__repository_deck=repository_deck
+        self.__card_service=card_service
     
     def create_deck(self, deck:Deck):
         return self.__repository_deck.create_deck(deck)
