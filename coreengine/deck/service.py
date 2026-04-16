@@ -1,6 +1,7 @@
 from .repository import InmemoryDeckRepository
 from .deckmodel import Deck
 from ..card.service import CardService
+from datetime import date
 
 class DeckService:
     def __init__(self, repository_deck:InmemoryDeckRepository,card_service:CardService):
@@ -27,6 +28,9 @@ class DeckService:
         self.__card_service.move_cards_to_deck(deck.deck_id, default_deck.deck_id)
         return self.__repository_deck.delete_deck(deck_id)
     
+    def delete_deck_and_cards(self, deck_id:int):
+        return self.__repository_deck.delete_deck_and_cards(deck_id)
+        
     def get_all_decks(self):
         return self.__repository_deck.get_all_decks()
     

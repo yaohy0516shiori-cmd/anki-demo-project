@@ -241,11 +241,11 @@ class SqliteCardRepository:
             raise ValueError("Deck ID must be an integer")
         rows=self.__conn.execute("""
         UPDATE card SET deck_id=? WHERE note_id=? AND deck_id!=?
-        """,(deck_id,note_id,deck_id)).fetchall()
+        """,(deck_id,note_id,deck_id))
         if len(rows)==0:
             return []
         self.__conn.commit()
-        return [self.__deserialize_card(row) for row in rows]
+        return rows.rowcount
     
     def move_cards_to_deck(self,from_deck_id:int,to_deck_id:int)->list[Card]:
         if not isinstance(from_deck_id,int) or from_deck_id<=0:
@@ -257,8 +257,6 @@ class SqliteCardRepository:
         
         rows=self.__conn.execute("""
         UPDATE card SET deck_id=? WHERE deck_id=?
-        """,(to_deck_id,from_deck_id)).fetchall()
-        if len(rows)==0:
-            return []
+        """,(to_deck_id,from_deck_id))
         self.__conn.commit()
-        return [self.__deserialize_card(row) for row in rows]
+        return rows.rowcount

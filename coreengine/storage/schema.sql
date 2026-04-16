@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS review_log (
     new_reps INTEGER NOT NULL,
     old_step_index INTEGER,
     new_step_index INTEGER,
+    hint_used BOOLEAN NOT NULL DEFAULT FALSE,
     review_time TEXT NOT NULL,
     FOREIGN KEY (card_id) REFERENCES card (card_id) ON DELETE CASCADE,
     FOREIGN KEY (deck_id) REFERENCES deck (deck_id) ON DELETE CASCADE

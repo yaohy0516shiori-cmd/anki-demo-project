@@ -32,25 +32,26 @@ class Scheduler_v1:
         pass
     # Core scheduling algorithm. It only computes the next state and does not save
     # Unified scheduling entry, dispatch by card.status
-    def schedule(self,card:Card,rating:str,today:date | None=None) -> dict:
+    def schedule(self,card:Card,rating:str,today:date | None=None,review_context:dict={}) -> dict:
+        use_hint=bool(review_context and review_context.get('hint_used'))
         if rating not in self.valid_ratings:
             raise ValueError(f"Invalid rating: {rating}")
         
         today=today if today is not None else datetime.now(timezone.utc).date()
 
         if card.status=="new":
-            return self.__schedule_new_card(card,rating,today)
+            return self.__schedule_new_card(card,rating,today,use_hint)
         elif card.status=="learning":
-            return self.__schedule_learning_card(card,rating,today)
+            return self.__schedule_learning_card(card,rating,today,use_hint)
         elif card.status=="review":
-            return self.__schedule_review_card(card,rating,today)
+            return self.__schedule_review_card(card,rating,today,use_hint)
         elif card.status=="relearning":
-            return self.__schedule_relearning_card(card,rating,today)
+            return self.__schedule_relearning_card(card,rating,today,use_hint)
         else:
             raise ValueError(f"Invalid card status: {card.status}")
     
     # Compute next state for a new card
-    def __schedule_new_card(self,card:Card,rating:str,today:date) -> dict:
+    def __schedule_new_card(self,card:Card,rating:str,today:date,use_hint:bool=False) -> dict:
         # first time exposur
         # good->learning
         # again->stay new
@@ -76,7 +77,7 @@ class Scheduler_v1:
             }
     
     # Compute next state for a learning card
-    def __schedule_learning_card(self,card:Card,rating:str,today:date) -> dict:
+    def __schedule_learning_card(self,card:Card,rating:str,today:date,use_hint:bool=False) -> dict:
         # learning + good  -> enter review
         # learning + again -> stay learning
         if rating == "again":
@@ -91,8 +92,19 @@ class Scheduler_v1:
             }
 
         current_step = card.step_index if card.step_index is not None else 0
+        
+        if use_hint:
+            return {
+                "status": "review",
+                "due": today + timedelta(days=1),
+                "interval": 1,
+                "ease": card.ease,
+                "lapses": card.lapses,
+                "reps": card.reps + 1,
+                "step_index": current_step,
+            }
+        
         next_step = current_step + 1
-
         if next_step >= self.learning_steps:
             return {
                 "status": "review",
@@ -115,9 +127,11 @@ class Scheduler_v1:
         }
 
     # Compute next state for a review card
-    def __schedule_review_card(self,card:Card,rating:str,today:date) -> dict:
+    def __schedule_review_card(self,card:Card,rating:str,today:date,use_hint:bool=False) -> dict:
         # review + good  -> stay review, increase interval
         # review + again -> enter relearning, count one lapse
+        
+
         if rating=="good":
             base_interval=card.interval if card.interval>0 else 1
 
@@ -133,9 +147,18 @@ class Scheduler_v1:
                 "reps":card.reps+1,
                 "step_index":None,
             }
-        # why? 依据是什么？cardmodel里默认值不是2.5吗？ 而且cardmodel为什么允许ease输入而不是直接给定初始值
-        new_ease=max(1.3, round(card.ease-0.2,2)) 
 
+        new_ease=max(1.3, round(card.ease-0.2,2)) 
+        if use_hint:
+            return {
+                "status": "review",
+                "due": today + timedelta(days=1),
+                "interval": 1,
+                "ease": card.ease,
+                "lapses": card.lapses,
+                "reps": card.reps + 1,
+                "step_index": 0,
+            }
         return{
             "status":"relearning",
             "due":today,
@@ -147,7 +170,7 @@ class Scheduler_v1:
         }
     
     # Compute next state for a relearning card
-    def __schedule_relearning_card(self,card:Card,rating:str,today:date) -> dict:
+    def __schedule_relearning_card(self,card:Card,rating:str,today:date,use_hint:bool=False) -> dict:
         # relearning + good  -> enter review, reset interval
         # relearning + again -> stay relearning, count one lapse
         if rating == "again":
@@ -162,6 +185,17 @@ class Scheduler_v1:
             }
 
         current_step = card.step_index if card.step_index is not None else 0
+        
+        if use_hint:
+            return {
+                "status": "review",
+                "due": today + timedelta(days=1),
+                "interval": 1,
+                "ease": card.ease,
+                "lapses": card.lapses,
+                "reps": card.reps + 1,
+                "step_index": current_step,
+            }
         next_step = current_step + 1
         
         if next_step >= self.relearning_steps: # schedule里也没有循环啊？在哪里循环？

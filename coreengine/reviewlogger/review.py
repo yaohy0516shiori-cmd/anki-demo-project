@@ -30,6 +30,7 @@ class ReviewLog:
         new_step_index:int|None=None,
         review_time:str|None=None,
         review_log_id:int | None=None,
+        hint_used:bool=False,
         ):
         if card_id<=0:
             raise ValueError("Card id must be positive")
@@ -55,4 +56,5 @@ class ReviewLog:
         self.old_step_index=old_step_index
         self.new_step_index=new_step_index
         self.review_log_id=review_log_id
+        self.hint_used=bool(hint_used)
         self.review_time=normalize_datetime_value(review_time) if review_time else now

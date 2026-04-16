@@ -16,8 +16,8 @@ class Deck:
         self.deck_name=deck_name.strip() if deck_name is not None else f"Deck {deck_id}"
         self.deck_id=deck_id
         self.deck_description=str(deck_description).strip() if deck_description is not None else ""
-        self.created_at=created_at.strip() if created_at.strip() is not None else now
-        self.updated_at=updated_at.strip() if updated_at.strip() is not None else now
+        self.created_at = created_at.strip() if isinstance(created_at, str) and created_at.strip() else now
+        self.updated_at = updated_at.strip() if isinstance(updated_at, str) and updated_at.strip() else now
     
     def to_dict(self):
         return {

@@ -143,12 +143,13 @@ class InMemoryCardRepository:
 
     def move_cards_to_deck(self,from_deck_id:int,to_deck_id:int):
         # move all cards to a new deck
-        move_cards=[]
+        count=0
         for card in self.get_cards_by_deck_id(from_deck_id):
             card.deck_id=to_deck_id
             card.touch()
-            move_cards.append(self.update_card(card))
-        return move_cards
+            self.update_card(card)
+            count+=1
+        return count
 
     def get_due_cards_by_deck_id(self,deck_id:int,today:date):
         # get all due cards from the repository by deck id and today
@@ -161,9 +162,10 @@ class InMemoryCardRepository:
     
     def move_note_cards_to_deck(self,note_id:int,deck_id:int):
         # move all cards from a note to a new deck
-        move_cards=[]
+        count=0
         for card in self.get_cards_by_note_id(note_id):
             card.deck_id=deck_id
             card.touch()
-            move_cards.append(self.update_card(card))
-        return move_cards
+            self.update_card(card)
+            count+=1
+        return count

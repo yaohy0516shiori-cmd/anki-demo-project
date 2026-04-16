@@ -24,6 +24,7 @@ class SqliteReviewLogRepository:
             'new_reps':review_log.new_reps,
             'old_step_index':review_log.old_step_index,
             'new_step_index':review_log.new_step_index,
+            'hint_used':review_log.hint_used,
             'review_time':review_log.review_time,
         }
     
@@ -47,6 +48,7 @@ class SqliteReviewLogRepository:
             new_reps=row['new_reps'],
             old_step_index=row['old_step_index'],
             new_step_index=row['new_step_index'],
+            hint_used=bool(row['hint_used']),
             review_time=row['review_time'],
         )
     
@@ -74,8 +76,9 @@ class SqliteReviewLogRepository:
             new_reps,
             old_step_index,
             new_step_index,
+            hint_used,
             review_time
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (data['card_id'], 
             data['deck_id'],
@@ -94,6 +97,7 @@ class SqliteReviewLogRepository:
             data['new_reps'], 
             data['old_step_index'], 
             data['new_step_index'], 
+            data['hint_used'],
             data['review_time'])
             )
         log_id=cursor.lastrowid
@@ -127,6 +131,7 @@ class SqliteReviewLogRepository:
         new_reps=?,
         old_step_index=?,
         new_step_index=?,
+        hint_used=?,
         review_time=? 
         WHERE review_log_id=?""", 
         (data['card_id'], 
@@ -146,6 +151,7 @@ class SqliteReviewLogRepository:
         data['new_reps'], 
         data['old_step_index'], 
         data['new_step_index'], 
+        data['hint_used'],
         data['review_time'],
         review_log.review_log_id))
         self.__conn.commit()

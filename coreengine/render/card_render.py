@@ -74,6 +74,11 @@ def render_card(card: Card, note: Note) -> dict:
 
     raise ValueError(f"Unsupported note type: {note_type.kind}")
 
+def render_hint(note: Note) -> str:
+    if note.note_id is None:
+        raise ValueError("Note id is required")
+    return note.hint.strip() if note.hint and note.hint.strip() else ''
+
 # Render a basic card
 def __render_basic_card(note: Note) -> dict:
     """

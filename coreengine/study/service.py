@@ -4,9 +4,10 @@ from ..card.cardmodel import Card
 from ..storage.card_sqlite_repository import SqliteCardRepository
 from ..reviewlogger.repository import ReviewLoggerRepository
 from ..reviewlogger.service import ReviewLoggerService
-from ..render.card_render import render_card
+from ..render.card_render import render_card, render_hint
 from ..storage.note_sqlite_repository import SqliteNoteRepository
 from ..storage.deck_sqlite_repository import SqliteDeckRepository
+
 # Study session coordinator.
 class StudyService:
     VALID_STATUSES={"new","learning","relearning","review"}
@@ -30,6 +31,8 @@ class StudyService:
 
         self.__session_deck_id=None
         self.__current_card_id=None
+        self.__current_hint_used=False
+        self.__current_back_revealed=False
         self.__today=None
 
     # Start a study session, filter today's eligible cards, and distribute them into queues
@@ -42,6 +45,8 @@ class StudyService:
         self.__today=self.__resolve_today(today)
         self.__session_deck_id=deck_id
         self.__current_card_id=None
+        self.__current_hint_used=False
+        self.__current_back_revealed=False
 
         self.__learning_queue.clear()
         self.__review_queue.clear()
@@ -51,9 +56,8 @@ class StudyService:
         review_cards=[]
         new_cards=[]
 
-        for card in self.__card_repo.list_cards():
-            if not self.__is_eligible(card):
-                continue
+        cards=self.__card_repo.get_due_cards_by_deck_id(self.__session_deck_id, self.__today)
+        for card in cards:
             if card.status == "new":
                 new_cards.append(card)
             elif card.status in {"learning","relearning"} :
@@ -103,17 +107,21 @@ class StudyService:
             "status":card.status,
             "step_index":card.step_index,
             "deck_id":self.__session_deck_id,
-            "hint_avaliable":bool(note.hint and note.hint.strip()),
+            "hint_available":bool(note.hint and note.hint.strip()),
         }
     
     # Submit rating for current card, call review service, and re-enqueue if needed
     def rate_current_card(self,rating:str):
+        self.__current_hint_used = False
+        self.__current_back_revealed = False
         if self.__current_card_id is None:
             raise ValueError("No current card to rate")
         result=self.__review_service.review_card(
             self.__current_card_id,
             rating,
-            today=self.__today)
+            today=self.__today,
+            hint_used=self.__current_hint_used
+            )
 
         updated_card=result["card"]
 
@@ -134,18 +142,28 @@ class StudyService:
         if note is None:
             raise ValueError("Note not found")
 
+        self.__current_back_revealed=True
         return render_card(card,note)["back"]
 
     def reveal_hint_of_current_card(self):
         if self.__current_card_id is None:
             raise ValueError("No current card to reveal")
+        if self.__current_back_revealed:
+            raise ValueError("Back of the current card has already been revealed")
+
         card=self.__card_repo.get_card(self.__current_card_id)
         if card is None:
             raise ValueError("Card not found")
+
         note=self.__note_repo.get_note(card.note_id)
         if note is None:
             raise ValueError("Note not found")
-        return note.hint.strip() if note.hint and note.hint.strip() else ''
+
+        hint_text=render_hint(note)
+        if hint_text:
+            self.__current_hint_used=True
+            return hint_text
+        return ''
 
     # Check if the study session is finished
     def is_finished(self)->bool:

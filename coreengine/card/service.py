@@ -59,13 +59,7 @@ class CardService:
         # delete all cards generated from a note
         return self.card_repo.delete_cards_by_note_id(note_id)
 
-    def get_cards_by_deck_id(self, deck_id: int):
-        return self.card_repo.get_cards_by_deck_id(deck_id)
-    
-    def get_due_cards_by_deck_id(self, deck_id: int, today: date):
-        return self.card_repo.get_due_cards_by_deck_id(deck_id, today)
-
-    def move_note_cards_to_deck(self, note_id:int, deck_id:int):
+    def move_note_cards_to_deck(self, note_id:int, deck_id:int) -> int:
         # Move all cards from a note to a deck
         if not isinstance(note_id, int) or note_id <= 0:
             raise ValueError("Note id must be a positive integer")
@@ -73,7 +67,7 @@ class CardService:
             raise ValueError("Deck id must be a positive integer")
         return self.card_repo.move_note_cards_to_deck(note_id, deck_id)
     
-    def move_cards_to_deck(self, from_deck_id:int, to_deck_id:int):
+    def move_cards_to_deck(self, from_deck_id:int, to_deck_id:int) -> int:
         # Move all cards from a deck to a new deck
         if not isinstance(from_deck_id, int) or from_deck_id <= 0:
             raise ValueError("From deck id must be a positive integer")
