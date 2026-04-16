@@ -1,18 +1,21 @@
 from ..note.notemodels import Note
 from .cardmodel import Card
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from ..note_type.type_registry import get_note_type
 import re
 
 # Generate cards from notes and provide card-level business interfaces.
 class CardService:
-    def __init__(self, card_repo):
+    def __init__(self, card_repo,note_repo):
         self.card_repo = card_repo
+        self.note_repo = note_repo
 
-    def create_cards_from_note(self, note:Note, deck_id:int, today=None):
+    def create_cards_from_note(self, note:Note, deck_id:int=1, today=None):
         # Decide how many cards to generate from a note and save them
         if note.note_id is None:
             raise ValueError("Note id is required")
+        if not isinstance(deck_id, int) or deck_id <= 0:
+            raise ValueError("Deck id must be a positive integer")
         create_cards = []
         default_today=today if today is not None else datetime.now(timezone.utc).date()
         now=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -31,17 +34,17 @@ class CardService:
         # Read one card
         return self.card_repo.get_card(card_id)
 
-    def get_card_by_note_id(self, note_id):
+    def get_cards_by_note_id(self, note_id):
         # Read all cards by note id
-        return self.card_repo.get_card_by_note_id(note_id)
+        return self.card_repo.get_cards_by_note_id(note_id)
 
-    def get_due_cards(self, today):
+    def get_cards_by_deck_id(self, deck_id:int):
+        # Read all cards by deck id
+        return self.card_repo.get_cards_by_deck_id(deck_id)
+
+    def get_due_cards_by_deck_id(self, deck_id:int, today:date):
         # Read all cards that are due today
-        result=[]
-        for card in self.card_repo.list_cards():
-            if card.due is not None and card.due <= today:
-                result.append(card)
-        return result
+        return self.card_repo.get_due_cards_by_deck_id(deck_id, today)
 
     def update_card(self, card):
         # Update a card
@@ -55,16 +58,40 @@ class CardService:
     def delete_cards_by_note_id(self, note_id:int):
         # delete all cards generated from a note
         return self.card_repo.delete_cards_by_note_id(note_id)
+
+    def get_cards_by_deck_id(self, deck_id: int):
+        return self.card_repo.get_cards_by_deck_id(deck_id)
     
-    def reconcile_cards_for_note(self, note:Note, deck_id:int, today=None):
+    def get_due_cards_by_deck_id(self, deck_id: int, today: date):
+        return self.card_repo.get_due_cards_by_deck_id(deck_id, today)
+
+    def move_note_cards_to_deck(self, note_id:int, deck_id:int):
+        # Move all cards from a note to a deck
+        if not isinstance(note_id, int) or note_id <= 0:
+            raise ValueError("Note id must be a positive integer")
+        if not isinstance(deck_id, int) or deck_id <= 0:
+            raise ValueError("Deck id must be a positive integer")
+        return self.card_repo.move_note_cards_to_deck(note_id, deck_id)
+    
+    def move_cards_to_deck(self, from_deck_id:int, to_deck_id:int):
+        # Move all cards from a deck to a new deck
+        if not isinstance(from_deck_id, int) or from_deck_id <= 0:
+            raise ValueError("From deck id must be a positive integer")
+        if not isinstance(to_deck_id, int) or to_deck_id <= 0:
+            raise ValueError("To deck id must be a positive integer")
+        return self.card_repo.move_cards_to_deck(from_deck_id, to_deck_id)
+
+    def reconcile_cards_for_note(self, note:Note, today=None):
         # synchronize existing cards with current note fields
         if note.note_id is None:
             raise ValueError("Note id is required")
         
         expected_template_ords=self.__get_template_ords(note)
         expected_template_ords_set=set(expected_template_ords)
-        existing_cards=self.get_card_by_note_id(note.note_id)
+
+        existing_cards=self.get_cards_by_note_id(note.note_id)
         existing_by_ord={card.template_ord:card for card in existing_cards}
+        target_deck_id = existing_cards[0].deck_id if existing_cards else 1
 
         for card in existing_cards:
             if card.template_ord not in expected_template_ords_set:
@@ -79,7 +106,7 @@ class CardService:
             card=Card(
                 note_id=note.note_id,
                 template_ord=template_ord,
-                deck_id=deck_id,
+                deck_id=target_deck_id,
                 status='new',
                 due=default_today,
                 created_at=now,
@@ -87,7 +114,7 @@ class CardService:
             )
             self.card_repo.add_card(card)
 
-        return self.get_card_by_note_id(note.note_id)
+        return self.get_cards_by_note_id(note.note_id)
     
 
     def __get_cloze_ords(self, text):
@@ -111,14 +138,5 @@ class CardService:
         else:
             raise ValueError(f"unsupported note type kind: {note_type.kind}")
     
-    def get_cards_by_deck_id(self, deck_id: int):
-        if deck_id <= 0:
-            raise ValueError("Deck id must be positive")
-        return self.card_repo.get_cards_by_deck_id(deck_id)
 
-    def move_cards_to_deck(self, from_deck_id: int, to_deck_id: int):
-        if from_deck_id <= 0 or to_deck_id <= 0:
-            raise ValueError("Deck id must be positive")
-        if from_deck_id == to_deck_id:
-            return []
-        return self.card_repo.move_cards_to_deck(from_deck_id, to_deck_id)
+    

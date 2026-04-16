@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS deck (
-    deck_id INTEGER PRIMARY KEY AUTOINCREMENT FROM 1,
+    deck_id INTEGER PRIMARY KEY AUTOINCREMENT,
     deck_name TEXT NOT NULL,
     deck_description TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,

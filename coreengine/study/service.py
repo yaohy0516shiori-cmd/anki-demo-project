@@ -1,12 +1,12 @@
 from collections import deque
 from datetime import datetime,timezone,date
 from ..card.cardmodel import Card
-from ..card.repository import InMemoryCardRepository
+from ..storage.card_sqlite_repository import SqliteCardRepository
 from ..reviewlogger.repository import ReviewLoggerRepository
 from ..reviewlogger.service import ReviewLoggerService
 from ..render.card_render import render_card
-from ..note.repository import InMemoryNoteRepository
-
+from ..storage.note_sqlite_repository import SqliteNoteRepository
+from ..storage.deck_sqlite_repository import SqliteDeckRepository
 # Study session coordinator.
 class StudyService:
     VALID_STATUSES={"new","learning","relearning","review"}
@@ -14,23 +14,35 @@ class StudyService:
     # Inject repositories/services and initialize three queues
     def __init__(
         self,
-        card_repo:InMemoryCardRepository,
+        card_repo:SqliteCardRepository,
         review_service:ReviewLoggerService,
-        note_repo:InMemoryNoteRepository
+        note_repo:SqliteNoteRepository,
+        deck_repo:SqliteDeckRepository
         ):
         self.__card_repo=card_repo
         self.__note_repo=note_repo
         self.__review_service=review_service
+        self.__deck_repo=deck_repo
+
         self.__learning_queue=deque()
         self.__review_queue=deque()
         self.__new_queue=deque()
+
+        self.__session_deck_id=None
         self.__current_card_id=None
         self.__today=None
 
     # Start a study session, filter today's eligible cards, and distribute them into queues
-    def start_study_session(self,today:date | None=None):
+    def start_study_session(self,deck_id:int,today:date | None=None):
+        if not isinstance(deck_id, int) or deck_id <= 0:
+            raise ValueError("Deck id must be a positive integer")
+        deck=self.__deck_repo.get_deck(deck_id)
+        if deck is None:
+            raise ValueError("Deck not found")
         self.__today=self.__resolve_today(today)
+        self.__session_deck_id=deck_id
         self.__current_card_id=None
+
         self.__learning_queue.clear()
         self.__review_queue.clear()
         self.__new_queue.clear()
@@ -57,12 +69,22 @@ class StudyService:
         self.__review_queue=deque(review_cards)
         self.__new_queue=deque(new_cards)
 
+        return {
+            "deck_id":self.__session_deck_id,
+            "deck_name":deck.deck_name,
+            "learning_queue":len(self.__learning_queue),
+            "review_queue":len(self.__review_queue),
+            "new_queue":len(self.__new_queue),
+        }
+
     # Resolve today's date, use today if provided, otherwise use current UTC date
     def __resolve_today(self,today:date | None=None):
         return today if today is not None else datetime.now(timezone.utc).date()
 
     # Pop the next card from session queues and render front/back
     def get_next_card(self):
+        if self.__session_deck_id is None:
+            raise ValueError("Session has not been started")
         if self.__current_card_id is not None:
             raise ValueError("Finish the current card before getting the next one")
 
@@ -80,6 +102,8 @@ class StudyService:
             "front":rendered["front"],
             "status":card.status,
             "step_index":card.step_index,
+            "deck_id":self.__session_deck_id,
+            "hint_avaliable":bool(note.hint and note.hint.strip()),
         }
     
     # Submit rating for current card, call review service, and re-enqueue if needed
@@ -93,11 +117,10 @@ class StudyService:
 
         updated_card=result["card"]
 
-        if self.__is_eligible(updated_card):
+        if self.__is_eligible(updated_card) and updated_card.deck_id == self.__session_deck_id:
             self.__enqueue_card(updated_card)
         
         self.__current_card_id=None
-
         return result
 
     def reveal_back_of_current_card(self):
@@ -112,7 +135,18 @@ class StudyService:
             raise ValueError("Note not found")
 
         return render_card(card,note)["back"]
-    
+
+    def reveal_hint_of_current_card(self):
+        if self.__current_card_id is None:
+            raise ValueError("No current card to reveal")
+        card=self.__card_repo.get_card(self.__current_card_id)
+        if card is None:
+            raise ValueError("Card not found")
+        note=self.__note_repo.get_note(card.note_id)
+        if note is None:
+            raise ValueError("Note not found")
+        return note.hint.strip() if note.hint and note.hint.strip() else ''
+
     # Check if the study session is finished
     def is_finished(self)->bool:
         return (len(self.__learning_queue) == 0 

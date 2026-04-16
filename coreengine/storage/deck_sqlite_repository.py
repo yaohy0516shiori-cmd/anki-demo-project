@@ -80,12 +80,12 @@ class SqliteDeckRepository:
         if not isinstance(deck_id,int):
             raise ValueError("Deck ID must be an integer")
         cursor=self.__conn.execute("""
-        DELETE FROM deck WHERE deck_id=?
+            DELETE FROM deck WHERE deck_id=?
         """,(deck_id,))
         if cursor.rowcount==0:
             raise ValueError("Deck not found")
         self.__conn.commit()
-        return "Deck deleted successfully"
+        return f"Deck{deck_id} deleted successfully"
     
     def get_all_decks(self):
         cursor=self.__conn.execute("""
@@ -114,16 +114,6 @@ class SqliteDeckRepository:
         """).fetchall()
         self.__conn.commit()
         return "Decks cleared successfully"
-    
-    def get_deck_by_id(self, deck_id:int):
-        if not isinstance(deck_id,int):
-            raise ValueError("Deck ID must be an integer")
-        row=self.__conn.execute("""
-        SELECT * FROM deck WHERE deck_id=?
-        """,(deck_id,)).fetchone()
-        if row is None:
-            raise ValueError("Deck not found")
-        return self.__deserialize_deck(row)
     
     def __ensure_default_deck(self):
         row=self.__conn.execute("""

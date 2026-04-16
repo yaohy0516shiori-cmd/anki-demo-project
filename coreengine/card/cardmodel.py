@@ -27,6 +27,8 @@ class Card:
             raise ValueError("Note id must be positive")
         if template_ord <0:
             raise ValueError("Temp ord must be positive")
+        if deck_id is None:
+            deck_id=1
         if not isinstance(deck_id, int) or deck_id < 0:
             raise ValueError("Deck id is not an integer or is not positive")
         if status not in self.select_status:
@@ -43,7 +45,7 @@ class Card:
         now=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
         self.note_id=note_id
-        self.deck_id=deck_id if deck_id is not None else 1
+        self.deck_id=deck_id
         self.template_ord=template_ord
         self.card_id=card_id
         self.status=status # new, learning, review, relearning

@@ -85,7 +85,7 @@ class ReviewLoggerRepository:
         pass # 日志能删除吗？
 
     # Get all review logs by card id
-    def get_log_by_card_id(self, card_id: int) -> List[ReviewLog]:
+    def get_logs_by_card_id(self, card_id: int) -> List[ReviewLog]:
         result=[]
         for data in self.__logs.values():
             if data["card_id"]==card_id:

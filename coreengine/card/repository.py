@@ -61,7 +61,7 @@ class InMemoryCardRepository:
             return None
         return self.__deserialize_card(data)
 
-    def get_card_by_note_id(self,note_id:int):
+    def get_cards_by_note_id(self,note_id:int):
         # get all cards from the repository by note id
         result=[]
         for data in self.__cards.values():
@@ -146,6 +146,24 @@ class InMemoryCardRepository:
         move_cards=[]
         for card in self.get_cards_by_deck_id(from_deck_id):
             card.deck_id=to_deck_id
+            card.touch()
+            move_cards.append(self.update_card(card))
+        return move_cards
+
+    def get_due_cards_by_deck_id(self,deck_id:int,today:date):
+        # get all due cards from the repository by deck id and today
+        result=[]
+        for data in self.__cards.values():
+            if data["deck_id"] == deck_id and data["due"] is not None and data["due"] <= today:
+                result.append(self.__deserialize_card(data))
+        result.sort(key=lambda card: (card.due,card.note_id,card.card_id,card.template_ord))
+        return result
+    
+    def move_note_cards_to_deck(self,note_id:int,deck_id:int):
+        # move all cards from a note to a new deck
+        move_cards=[]
+        for card in self.get_cards_by_note_id(note_id):
+            card.deck_id=deck_id
             card.touch()
             move_cards.append(self.update_card(card))
         return move_cards

@@ -39,10 +39,11 @@ class InmemoryDeckRepository:
             deck_id= deck.deck_id,
             deck_name= deck.deck_name,
             deck_description= deck.deck_description,
-            deck_updated_at= deck.deck_updated_at,
-            deck_created_at= old["deck_created_at"]
+            updated_at= deck.updated_at,
+            created_at= old["created_at"]
             )
         self.__decks[deck.deck_id]=self.__serialize_deck(update)
+        deck.touch()
         return self.__deserialize_deck(self.__decks[deck.deck_id])
         
     def delete_deck(self, deck_id:int):

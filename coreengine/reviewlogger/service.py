@@ -18,7 +18,7 @@ class ReviewLoggerService:
 
     # Read card → normalize rating → call scheduler → update card → write revlog
     def review_card(self, card_id: int, rating:str,today=None):
-        normalized_card=self.__normalize_rating(rating)
+        normalized_rating=self.__normalize_rating(rating)
         card=self.__card_repo.get_card(card_id)
         if card is None:
             raise ValueError(f"Card with id {card_id} not found")
@@ -32,7 +32,7 @@ class ReviewLoggerService:
         old_reps=card.reps
         old_step_index=card.step_index
         # scheduler calculates the next review time
-        result = self.__scheduler.schedule(card,normalized_card,today=today)
+        result = self.__scheduler.schedule(card,normalized_rating,today=today)
 
         # apply scheduler result to card
         card.status=result["status"]
@@ -50,7 +50,7 @@ class ReviewLoggerService:
         log=ReviewLog(
             card_id=updated_card.card_id,
             deck_id=updated_card.deck_id,
-            rating=normalized_card,
+            rating=normalized_rating,
             old_status=old_status,
             new_status=updated_card.status,
             old_due=old_due,

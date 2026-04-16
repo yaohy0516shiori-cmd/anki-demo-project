@@ -39,3 +39,9 @@ class DeckService:
     def move_cards_to_deck(self, from_deck_id:int, to_deck_id:int):
         return self.__card_service.move_cards_to_deck(from_deck_id, to_deck_id)
     
+    def move_note_cards_to_deck(self, note_id:int, deck_id:int):
+        return self.__card_service.move_note_cards_to_deck(note_id, deck_id)
+    
+    def get_due_cards_by_deck_id(self, deck_id:int, today:date):
+        return self.__card_service.get_due_cards_by_deck_id(deck_id, today)
+    

@@ -12,25 +12,26 @@ from ..card.service import CardService
 
 class NoteService:
     def __init__(self, repository_note:SqliteNoteRepository, card_service:CardService):
+        if repository_note is None:
+            raise ValueError("Repository note is not set")
+        if card_service is None:
+            raise ValueError("Card service is not set")
         self.__repository_note = repository_note
         self.__card_service = card_service
    
-    def create_note(self, note_type, fields,deck_id=0, tags=None,note_id=None,today=None):
+    def create_note(self, note_type, fields, tags=None, note_id=None, hint=None, today=None):
         # create a note: validate, deduplicate, construct Note, save to repo
         # deck_id is 0 by default, if deck_id is not set, the note will be created in the default deck
-        if not isinstance(deck_id, int) or deck_id < 0:
-            raise ValueError("Deck id is not an integer or is not positive")
         tags=tags if tags is not None else []
         self.__validate_fields(note_type, fields)
         if self.is_duplicate(fields,note_type.note_type_id,note_id):
             raise ValueError("The note is duplicate")
 
-        note=Note(note_type_id=note_type.note_type_id, fields=fields, tags=tags, deck_id=deck_id)
+        note=Note(note_type_id=note_type.note_type_id, fields=fields, tags=tags, hint=hint)
         saved_note_id = self.__repository_note.add_note(note)
         saved_note = self.__repository_note.get_note(saved_note_id)
 
-        if self.__card_service is not None:
-            self.__card_service.create_cards_from_note(saved_note,deck_id=deck_id,today=today)
+        self.__card_service.create_cards_from_note(saved_note,deck_id=1,today=today)
 
         return saved_note_id
 
@@ -43,26 +44,28 @@ class NoteService:
         # get all notes from the repository
         return self.__repository_note.get_all_notes()
 
-    def update_note(self, note_id, fields=None, tags=None,today=None, deck_id:int=1):
+    def update_note(self, note_id, fields=None, tags=None,hint=None, today=None):
         # update a note in the repository, fields/tags, refresh, then save to repo
         note = self.__repository_note.get_note(note_id)
         note_type=get_note_type(note.note_type_id)
         new_fields=note.fields if fields is None else fields
         new_tags=note.tags if tags is None else tags
-
+        new_hint=note.hint if hint is None else hint
         self.__validate_fields(note_type, new_fields)
         if self.is_duplicate(new_fields,note.note_type_id,note_id):
             raise ValueError("The note is duplicate")
-
+        old_fields=note.fields
         note.fields=new_fields
         note.tags=new_tags
+        note.hint=new_hint
         note.refresh()
 
         updated_note_id = self.__repository_note.update_note(note)
         updated_note = self.__repository_note.get_note(updated_note_id)
 
-        if self.__card_service is not None:
-            self.__card_service.reconcile_cards_for_note(updated_note,deck_id=deck_id,today=today)
+        # it means 
+        if old_fields!=new_fields and note_type.kind=='cloze':
+            self.__card_service.reconcile_cards_for_note(updated_note, today=today)
 
         return updated_note_id
 
