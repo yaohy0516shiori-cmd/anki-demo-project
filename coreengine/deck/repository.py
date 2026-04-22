@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 class InmemoryDeckRepository:
     def __init__(self):
         self.__decks={
-            1:Deck(deck_id=1, deck_name="Default Deck", deck_description="System Default Deck").to_dict()
+            1:Deck(deck_id=1, deck_name="Default", deck_description="System Default Deck").to_dict()
         }
         self.__next_id=2
     
@@ -71,7 +71,7 @@ class InmemoryDeckRepository:
     
     def clear_decks(self):
         self.__decks={
-            1:Deck(deck_id=1, deck_name="Default Deck", deck_description="System Default Deck").to_dict()
+            1:Deck(deck_id=1, deck_name="Default", deck_description="System Default Deck").to_dict()
         }
         self.__next_id=2
     
@@ -85,3 +85,11 @@ class InmemoryDeckRepository:
             if deck["deck_name"] == deck_name:
                 return self.__deserialize_deck(deck)
         raise ValueError("Deck not found")
+
+    def delete_deck_and_cards(self, deck_id:int):
+        if deck_id not in self.__decks:
+            raise ValueError("Deck not found")
+        if deck_id == 1:
+            raise ValueError("Default deck cannot be deleted")
+        del self.__decks[deck_id]
+        return deck_id

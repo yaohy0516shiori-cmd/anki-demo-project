@@ -128,17 +128,17 @@ class SqliteCardRepository:
         self.__conn.commit()
         return self.get_card(card.card_id)
 
-    def get_cards_by_note_id(self,note_id:int)->list[Card]:
-        if not isinstance(note_id,int):
-            raise ValueError("Note ID must be an integer")
+    def get_cards_by_note_id(self,note_id:int)->Optional[list[Card]]:
+        if not isinstance(note_id,int) or note_id<=0:
+            raise ValueError("Note ID must be a positive integer")
         rows=self.__conn.execute("""
         SELECT * FROM card WHERE note_id=?
         """,(note_id,)).fetchall()
-        if len(rows)==0:
-            return []
-        result=[self.__deserialize_card(row) for row in rows]
-        result.sort(key=lambda card: (card.note_id,card.card_id,card.template_ord))
-        return result
+        if rows.rowcount==0:
+            return None
+        cards=[self.__deserialize_card(row) for row in rows]
+        cards.sort(key=lambda card: (card.note_id,card.card_id,card.template_ord))
+        return cards
         
     def get_cards_by_note_id_and_ord(self,note_id:int,template_ord:int)->Optional[Card]:
         if not isinstance(note_id,int):
@@ -149,7 +149,7 @@ class SqliteCardRepository:
         SELECT * FROM card WHERE note_id=? AND template_ord=?
         """,(note_id,template_ord)).fetchone()
         if row is None:
-            return []
+            return None
         return self.__deserialize_card(row)
         
     def list_cards(self):
@@ -218,8 +218,8 @@ class SqliteCardRepository:
         rows=self.__conn.execute("""
         SELECT * FROM card WHERE deck_id=?
         """,(deck_id,)).fetchall()
-        if len(rows)==0:
-            return []
+        if rows.rowcount==0:
+            return None
         result=[self.__deserialize_card(row) for row in rows]
         result.sort(key=lambda card: (card.deck_id,card.card_id,card.template_ord))
         return result
@@ -230,8 +230,8 @@ class SqliteCardRepository:
         rows=self.__conn.execute("""
         SELECT * FROM card WHERE deck_id=? AND due<=? ORDER BY due,note_id,card_id,template_ord
         """,(deck_id,today.isoformat())).fetchall()
-        if len(rows)==0:
-            return []
+        if rows.rowcount==0:
+            return None
         return [self.__deserialize_card(row) for row in rows]
     
     def move_note_cards_to_deck(self,note_id:int,deck_id:int)->list[Card]:
@@ -242,8 +242,6 @@ class SqliteCardRepository:
         rows=self.__conn.execute("""
         UPDATE card SET deck_id=? WHERE note_id=? AND deck_id!=?
         """,(deck_id,note_id,deck_id))
-        if len(rows)==0:
-            return []
         self.__conn.commit()
         return rows.rowcount
     
@@ -253,10 +251,20 @@ class SqliteCardRepository:
         if not isinstance(to_deck_id,int) or to_deck_id<=0:
             raise ValueError("To Deck ID must be a positive integer")
         if from_deck_id==to_deck_id:
-            return []
+            return 0
         
         rows=self.__conn.execute("""
         UPDATE card SET deck_id=? WHERE deck_id=?
         """,(to_deck_id,from_deck_id))
         self.__conn.commit()
         return rows.rowcount
+
+    def delete_cards_by_deck_id(self, deck_id: int) -> int:
+        if not isinstance(deck_id, int):
+            raise ValueError("Deck ID must be an integer")
+
+        cursor = self.__conn.execute("""
+        DELETE FROM card WHERE deck_id = ?
+        """, (deck_id,))
+        self.__conn.commit()
+        return cursor.rowcount

@@ -4,7 +4,7 @@ from ..card.service import CardService
 from datetime import date
 
 class DeckService:
-    def __init__(self, repository_deck:InmemoryDeckRepository,card_service:CardService):
+    def __init__(self, repository_deck,card_service):
         self.__repository_deck=repository_deck
         self.__card_service=card_service
     
@@ -18,6 +18,7 @@ class DeckService:
         return self.__repository_deck.update_deck(deck)
 
     def delete_deck(self, deck_id:int):
+        # Safe delete: preserve cards by moving them to default deck
         deck=self.__repository_deck.get_deck(deck_id)
         
         if self.__repository_deck.is_default_deck(deck_id):
@@ -29,7 +30,20 @@ class DeckService:
         return self.__repository_deck.delete_deck(deck_id)
     
     def delete_deck_and_cards(self, deck_id:int):
-        return self.__repository_deck.delete_deck_and_cards(deck_id)
+        # Hard delete: delete deck and all its cards
+        if not isinstance(deck_id,int) or deck_id<=0:
+            raise ValueError("Deck ID must be a positive integer")
+        if self.__repository_deck.is_default_deck(deck_id):
+            raise ValueError("Default deck cannot be deleted")
+        deck=self.__repository_deck.get_deck(deck_id)
+        delete_card_count=self.__card_service.delete_cards_by_deck_id(deck_id)
+        self.__repository_deck.delete_deck(deck_id)
+
+        return {
+            'deleted_deck_id': deck_id,
+            'deleted_deck_name': deck.deck_name,
+            'deleted_card_count': delete_card_count
+        }
         
     def get_all_decks(self):
         return self.__repository_deck.get_all_decks()

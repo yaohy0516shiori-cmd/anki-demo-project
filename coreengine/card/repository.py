@@ -58,7 +58,7 @@ class InMemoryCardRepository:
         # get a card from the repository by id
         data=self.__cards.get(card_id)
         if data is None:
-            return None
+            raise ValueError("Card not found")
         return self.__deserialize_card(data)
 
     def get_cards_by_note_id(self,note_id:int):
@@ -79,7 +79,7 @@ class InMemoryCardRepository:
         
     def list_cards(self):
         # get all cards from the repository
-        return (self.__deserialize_card(data) for data in self.__cards.values())
+        return [self.__deserialize_card(data) for data in self.__cards.values()]
 
     def update_card(self,card:Card):
         # update a card in the repository
@@ -169,3 +169,14 @@ class InMemoryCardRepository:
             self.update_card(card)
             count+=1
         return count
+
+    def delete_cards_by_deck_id(self, deck_id: int) -> int:
+        deleted_ids = []
+        for card_id, data in self.__cards.items():
+            if data["deck_id"] == deck_id:
+                deleted_ids.append(card_id)
+
+        for card_id in deleted_ids:
+            del self.__cards[card_id]
+
+        return len(deleted_ids)

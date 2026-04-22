@@ -56,8 +56,8 @@ class StudyService:
         review_cards=[]
         new_cards=[]
 
-        cards=self.__card_repo.get_due_cards_by_deck_id(self.__session_deck_id, self.__today)
-        for card in cards:
+        due_cards=self.__card_repo.get_due_cards_by_deck_id(self.__session_deck_id, self.__today)
+        for card in due_cards:
             if card.status == "new":
                 new_cards.append(card)
             elif card.status in {"learning","relearning"} :
@@ -112,23 +112,27 @@ class StudyService:
     
     # Submit rating for current card, call review service, and re-enqueue if needed
     def rate_current_card(self,rating:str):
-        self.__current_hint_used = False
-        self.__current_back_revealed = False
         if self.__current_card_id is None:
             raise ValueError("No current card to rate")
-        result=self.__review_service.review_card(
+
+        hint_used = self.__current_hint_used
+
+        result = self.__review_service.review_card(
             self.__current_card_id,
             rating,
             today=self.__today,
-            hint_used=self.__current_hint_used
-            )
+            hint_used=hint_used
+        )
 
-        updated_card=result["card"]
+        updated_card = result["card"]
 
         if self.__is_eligible(updated_card) and updated_card.deck_id == self.__session_deck_id:
             self.__enqueue_card(updated_card)
-        
-        self.__current_card_id=None
+
+        self.__current_card_id = None
+        self.__current_hint_used = False
+        self.__current_back_revealed = False
+
         return result
 
     def reveal_back_of_current_card(self):

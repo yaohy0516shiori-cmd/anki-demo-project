@@ -18,7 +18,7 @@ class SqliteNoteRepository:
             'checksum':note.checksum,
             'created_at':note.created_at,
             'updated_at':note.updated_at,
-            'hint':note.hint,
+            'hint':note.hint if note.hint is not None else '',
         }
     
     def __deserialize_note(self,row:sqlite3.Row)->Note:
@@ -31,7 +31,7 @@ class SqliteNoteRepository:
             checksum=row['checksum'],
             created_at=row['created_at'],
             updated_at=row['updated_at'],
-            hint=row['hint'],
+            hint=row['hint'] if row['hint'] is not None else '',
         )
     
     def add_note(self,note:Note):
@@ -60,7 +60,7 @@ class SqliteNoteRepository:
             data['checksum'],
             data['created_at'],
             data['updated_at'],
-            data['hint'],
+            data['hint'] if data['hint'] is not None else '',
         )
         )
         self.__conn.commit()

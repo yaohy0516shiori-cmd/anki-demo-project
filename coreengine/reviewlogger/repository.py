@@ -84,7 +84,7 @@ class ReviewLoggerRepository:
     
     # Delete a review log
     def delete_log(self, review_log_id: int):
-        pass # 日志能删除吗？
+        raise NotImplementedError("V1 does not support deleting review logs")
 
     # Get all review logs by card id
     def get_logs_by_card_id(self, card_id: int) -> List[ReviewLog]:

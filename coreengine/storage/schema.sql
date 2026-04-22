@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS card (
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(note_id,template_ord),
     FOREIGN KEY (note_id) REFERENCES note (note_id) ON DELETE CASCADE,
-    FOREIGN KEY (deck_id) REFERENCES deck (deck_id) ON DELETE CASCADE
+    FOREIGN KEY (deck_id) REFERENCES deck (deck_id) ON DELETE RESTRICT
 );
 -- index on note_id used for search cards by note_id
 CREATE INDEX IF NOT EXISTS idx_card_note_id ON card (note_id);

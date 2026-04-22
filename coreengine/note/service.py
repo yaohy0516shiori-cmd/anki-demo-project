@@ -11,7 +11,7 @@ from ..storage.note_sqlite_repository import SqliteNoteRepository
 from ..card.service import CardService
 
 class NoteService:
-    def __init__(self, repository_note:SqliteNoteRepository, card_service:CardService):
+    def __init__(self, repository_note, card_service):
         if repository_note is None:
             raise ValueError("Repository note is not set")
         if card_service is None:
@@ -22,6 +22,7 @@ class NoteService:
     def create_note(self, note_type, fields, tags=None, note_id=None, hint=None, today=None):
         # create a note: validate, deduplicate, construct Note, save to repo
         # deck_id is 0 by default, if deck_id is not set, the note will be created in the default deck
+        hint=hint if hint is not None else ''
         tags=tags if tags is not None else []
         self.__validate_fields(note_type, fields)
         if self.is_duplicate(fields,note_type.note_type_id,note_id):
@@ -51,6 +52,11 @@ class NoteService:
         new_fields=note.fields if fields is None else fields
         new_tags=note.tags if tags is None else tags
         new_hint=note.hint if hint is None else hint
+        if new_hint is None:
+            new_hint = ""
+        elif not isinstance(new_hint, str):
+            raise ValueError("Hint must be a string")
+
         self.__validate_fields(note_type, new_fields)
         if self.is_duplicate(new_fields,note.note_type_id,note_id):
             raise ValueError("The note is duplicate")

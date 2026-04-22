@@ -109,10 +109,9 @@ class SqliteDeckRepository:
         return deck_id==self.get_default_deck_id()
     
     def clear_decks(self):
-        cursor=self.__conn.execute("""
-        DELETE FROM deck
-        """).fetchall()
+        cursor=self.__conn.execute("DELETE FROM deck")
         self.__conn.commit()
+        self.__ensure_default_deck()
         return "Decks cleared successfully"
     
     def __ensure_default_deck(self):
@@ -128,7 +127,7 @@ class SqliteDeckRepository:
             created_at, 
             updated_at) 
             VALUES (1, 
-            'Default Deck', 
+            'Default', 
             'System Default Deck', 
             CURRENT_TIMESTAMP, 
             CURRENT_TIMESTAMP
@@ -147,3 +146,4 @@ class SqliteDeckRepository:
         if row is None:
             raise ValueError("Deck not found")
         return self.__deserialize_deck(row)
+

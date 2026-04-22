@@ -157,7 +157,7 @@ class SqliteReviewLogRepository:
         self.__conn.commit()
     
     def delete_log(self,review_log_id:int):
-        pass
+        raise NotImplementedError("V1 does not support deleting review logs")
 
     def get_logs_by_card_id(self,card_id:int)->list[ReviewLog]:
         rows=self.__conn.execute("SELECT * FROM review_log WHERE card_id=?", (card_id,)).fetchall()

@@ -41,12 +41,19 @@ class Note:
     checksum:Optional[str]=None
     created_at:Optional[str]=None
     updated_at:Optional[str]=None
-    hint:Optional[str]=None
+    hint:Optional[str]=''
+
 
     def __post_init__(self):
         # Validate fields, generate checksum, set timestamps after init
         self.__validation_content(self.fields, "fields")
         self.__validate_note_type_id(self.note_type_id)
+        if self.hint is None:
+            self.hint = ""
+        elif not isinstance(self.hint, str):
+            raise ValueError("Hint must be a string")
+        else:
+            self.hint = self.hint.strip()
         if not isinstance(self.tags, list):
             raise ValueError("Tags must be a list")
 

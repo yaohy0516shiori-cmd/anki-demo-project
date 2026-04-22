@@ -16,7 +16,7 @@ class InMemoryNoteRepository:
             "checksum": note.checksum,
             "created_at": note.created_at,
             "updated_at": note.updated_at,
-            "hint": note.hint
+            "hint": note.hint if note.hint is not None else ''
         }
     
     def __deserialize_note(self,data:dict):
@@ -30,7 +30,7 @@ class InMemoryNoteRepository:
             checksum=data["checksum"],
             created_at=data["created_at"],
             updated_at=data["updated_at"],
-            hint=data["hint"])
+            hint=data["hint"] if data["hint"] is not None else '')
     
     def add_note(self,note:Note):
         # add a note to the repository and assign a new id to the note
