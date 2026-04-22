@@ -128,7 +128,7 @@ class SqliteDeckRepository:
             updated_at) 
             VALUES (1, 
             'Default', 
-            'System Default Deck', 
+            'System default deck', 
             CURRENT_TIMESTAMP, 
             CURRENT_TIMESTAMP
             )

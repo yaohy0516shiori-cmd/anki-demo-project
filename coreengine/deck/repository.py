@@ -85,11 +85,3 @@ class InmemoryDeckRepository:
             if deck["deck_name"] == deck_name:
                 return self.__deserialize_deck(deck)
         raise ValueError("Deck not found")
-
-    def delete_deck_and_cards(self, deck_id:int):
-        if deck_id not in self.__decks:
-            raise ValueError("Deck not found")
-        if deck_id == 1:
-            raise ValueError("Default deck cannot be deleted")
-        del self.__decks[deck_id]
-        return deck_id

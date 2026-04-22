@@ -135,7 +135,7 @@ class SqliteCardRepository:
         SELECT * FROM card WHERE note_id=?
         """,(note_id,)).fetchall()
         if rows.rowcount==0:
-            return None
+            return []
         cards=[self.__deserialize_card(row) for row in rows]
         cards.sort(key=lambda card: (card.note_id,card.card_id,card.template_ord))
         return cards
@@ -149,7 +149,7 @@ class SqliteCardRepository:
         SELECT * FROM card WHERE note_id=? AND template_ord=?
         """,(note_id,template_ord)).fetchone()
         if row is None:
-            return None
+            return []
         return self.__deserialize_card(row)
         
     def list_cards(self):
@@ -212,14 +212,14 @@ class SqliteCardRepository:
         """).fetchall()
         return [self.__deserialize_card(row) for row in rows]
 
-    def get_cards_by_deck_id(self,deck_id:int)->list[Card]:
+    def get_cards_by_deck_id(self,deck_id:int)->Optional[list[Card]]:
         if not isinstance(deck_id,int):
             raise ValueError("Deck ID must be an integer")
         rows=self.__conn.execute("""
         SELECT * FROM card WHERE deck_id=?
         """,(deck_id,)).fetchall()
         if rows.rowcount==0:
-            return None
+            return []
         result=[self.__deserialize_card(row) for row in rows]
         result.sort(key=lambda card: (card.deck_id,card.card_id,card.template_ord))
         return result
@@ -231,7 +231,7 @@ class SqliteCardRepository:
         SELECT * FROM card WHERE deck_id=? AND due<=? ORDER BY due,note_id,card_id,template_ord
         """,(deck_id,today.isoformat())).fetchall()
         if rows.rowcount==0:
-            return None
+            return []
         return [self.__deserialize_card(row) for row in rows]
     
     def move_note_cards_to_deck(self,note_id:int,deck_id:int)->list[Card]:

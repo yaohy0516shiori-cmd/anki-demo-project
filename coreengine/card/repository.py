@@ -155,8 +155,9 @@ class InMemoryCardRepository:
         # get all due cards from the repository by deck id and today
         result=[]
         for data in self.__cards.values():
-            if data["deck_id"] == deck_id and data["due"] is not None and data["due"] <= today:
-                result.append(self.__deserialize_card(data))
+            card = self.__deserialize_card(data)
+            if card.deck_id == deck_id and card.due is not None and card.due <= today:
+                result.append(card)
         result.sort(key=lambda card: (card.due,card.note_id,card.card_id,card.template_ord))
         return result
     

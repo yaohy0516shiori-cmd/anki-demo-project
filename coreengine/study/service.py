@@ -56,7 +56,7 @@ class StudyService:
         review_cards=[]
         new_cards=[]
 
-        due_cards=self.__card_repo.get_due_cards_by_deck_id(self.__session_deck_id, self.__today)
+        due_cards=self.__card_repo.get_due_cards_by_deck_id(self.__session_deck_id, self.__today) or []
         for card in due_cards:
             if card.status == "new":
                 new_cards.append(card)
