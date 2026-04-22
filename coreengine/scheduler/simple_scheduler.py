@@ -28,8 +28,28 @@ class Scheduler_v1:
     learning_steps=4
     relearning_steps=3
 
-    def __init__(self):
-        pass
+    def __init__(self,learning_steps: int = 1, relearning_steps: int = 1):
+        if learning_steps < 1:
+            raise ValueError("learning_steps must be at least 1")
+        if relearning_steps < 1:
+            raise ValueError("relearning_steps must be at least 1")
+        self.learning_steps = learning_steps
+        self.relearning_steps = relearning_steps
+        self.valid_rating = ['good', 'again']
+        self.hint_good_ease_penalty = 0.05
+        self.again_ease_penalty = 0.2
+
+    def __apply_again_penalty(self, card: Card) -> dict:
+        return {
+            "ease": max(1.3, round(card.ease - self.again_ease_penalty, 2)),
+            "lapses": card.lapses + 1,
+            "reps": card.reps + 1,
+        }
+
+    def __apply_hint_good_ease(self, card: Card, used_hint: bool) -> float:
+        if not used_hint:
+            return card.ease
+        return max(1.3, round(card.ease - self.hint_good_ease_penalty, 2))
     # Core scheduling algorithm. It only computes the next state and does not save
     # Unified scheduling entry, dispatch by card.status
     def schedule(self,card:Card,rating:str,today:date | None=None,review_context:dict={}) -> dict:
@@ -51,66 +71,56 @@ class Scheduler_v1:
             raise ValueError(f"Invalid card status: {card.status}")
     
     # Compute next state for a new card
-    def __schedule_new_card(self,card:Card,rating:str,today:date,use_hint:bool=False) -> dict:
-        # first time exposur
-        # good->learning
-        # again->stay new
-        if rating=="good":
-            return {
-                "status":"learning",
-                "due":today,
-                "interval":0,
-                "ease":card.ease,
-                "lapses":card.lapses,
-                "reps":card.reps+1,
-                "step_index":0,
-            }
-        elif rating=="again":
-            return {
-                "status":"learning",
-                "due":today, # why today?
-                "interval":0,
-                "ease":card.ease,
-                "lapses":card.lapses,
-                "reps":card.reps+1,
-                "step_index":0, # 重复第一次展示（比如我后面每张复习卡可以设计不同的出卡方式？）
-            }
-    
-    # Compute next state for a learning card
-    def __schedule_learning_card(self,card:Card,rating:str,today:date,use_hint:bool=False) -> dict:
-        # learning + good  -> enter review
-        # learning + again -> stay learning
+    def __schedule_new_card(self, card: Card, rating: str, today: date, used_hint: bool) -> dict:
         if rating == "again":
+            penalty = self.__apply_again_penalty(card)
             return {
                 "status": "learning",
                 "due": today,
                 "interval": 0,
-                "ease": card.ease,
-                "lapses": card.lapses,
-                "reps": card.reps + 1,
+                "ease": penalty["ease"],
+                "lapses": penalty["lapses"],
+                "reps": penalty["reps"],
                 "step_index": 0,
             }
 
-        current_step = card.step_index if card.step_index is not None else 0
-        
-        if use_hint:
+        new_ease = self.__apply_hint_good_ease(card, used_hint)
+
+        return {
+            "status": "learning",
+            "due": today,
+            "interval": 0,
+            "ease": new_ease,
+            "lapses": card.lapses,
+            "reps": card.reps + 1,
+            "step_index": 0,
+        }
+    
+    # Compute next state for a learning card
+    def __schedule_learning_card(self, card: Card, rating: str, today: date, used_hint: bool) -> dict:
+        if rating == "again":
+            penalty = self.__apply_again_penalty(card)
             return {
-                "status": "review",
-                "due": today + timedelta(days=1),
-                "interval": 1,
-                "ease": card.ease,
-                "lapses": card.lapses,
-                "reps": card.reps + 1,
-                "step_index": current_step,
+                "status": "learning",
+                "due": today,
+                "interval": 0,
+                "ease": penalty["ease"],
+                "lapses": penalty["lapses"],
+                "reps": penalty["reps"],
+                "step_index": 0,
             }
-        
+
+        new_ease = self.__apply_hint_good_ease(card, used_hint)
+
+        current_step = card.step_index if card.step_index is not None else 0
         next_step = current_step + 1
+
         if next_step >= self.learning_steps:
             return {
                 "status": "review",
                 "due": today + timedelta(days=1),
                 "interval": 1,
-                "ease": card.ease,
+                "ease": new_ease,
                 "lapses": card.lapses,
                 "reps": card.reps + 1,
                 "step_index": None,
@@ -120,90 +130,65 @@ class Scheduler_v1:
             "status": "learning",
             "due": today,
             "interval": 0,
-            "ease": card.ease,
+            "ease": new_ease,
             "lapses": card.lapses,
             "reps": card.reps + 1,
             "step_index": next_step,
         }
 
     # Compute next state for a review card
-    def __schedule_review_card(self,card:Card,rating:str,today:date,use_hint:bool=False) -> dict:
-        # review + good  -> stay review, increase interval
-        # review + again -> enter relearning, count one lapse
-        
-
-        if rating=="good":
-            base_interval=card.interval if card.interval>0 else 1
-
-            # simple algorithm for interval increase
-            new_interval=max(round(base_interval*card.ease),base_interval+1)
-
-            return {
-                "status":"review",
-                "due":today+timedelta(days=new_interval),
-                "interval":new_interval,
-                "ease":card.ease,
-                "lapses":card.lapses,
-                "reps":card.reps+1,
-                "step_index":None,
-            }
-
-        new_ease=max(1.3, round(card.ease-0.2,2)) 
-        if use_hint:
-            return {
-                "status": "review",
-                "due": today + timedelta(days=1),
-                "interval": 1,
-                "ease": card.ease,
-                "lapses": card.lapses,
-                "reps": card.reps + 1,
-                "step_index": 0,
-            }
-        return{
-            "status":"relearning",
-            "due":today,
-            "interval":0,
-            "ease":new_ease,
-            "lapses":card.lapses+1,
-            "reps":card.reps+1,
-            "step_index":0,
-        }
-    
-    # Compute next state for a relearning card
-    def __schedule_relearning_card(self,card:Card,rating:str,today:date,use_hint:bool=False) -> dict:
-        # relearning + good  -> enter review, reset interval
-        # relearning + again -> stay relearning, count one lapse
+    def __schedule_review_card(self, card: Card, rating: str, today: date, used_hint: bool) -> dict:
         if rating == "again":
+            penalty = self.__apply_again_penalty(card)
             return {
                 "status": "relearning",
                 "due": today,
                 "interval": 0,
-                "ease": card.ease,
-                "lapses": card.lapses,
-                "reps": card.reps + 1,
+                "ease": penalty["ease"],
+                "lapses": penalty["lapses"],
+                "reps": penalty["reps"],
                 "step_index": 0,
             }
 
-        current_step = card.step_index if card.step_index is not None else 0
-        
-        if use_hint:
+        new_ease = self.__apply_hint_good_ease(card, used_hint)
+        base_interval = card.interval if card.interval > 0 else 1
+        new_interval = max(round(base_interval * new_ease), base_interval + 1)
+
+        return {
+            "status": "review",
+            "due": today + timedelta(days=new_interval),
+            "interval": new_interval,
+            "ease": new_ease,
+            "lapses": card.lapses,
+            "reps": card.reps + 1,
+            "step_index": None,
+        }
+
+    # Compute next state for a relearning card
+    def __schedule_relearning_card(self, card: Card, rating: str, today: date, used_hint: bool) -> dict:
+        if rating == "again":
+            penalty = self.__apply_again_penalty(card)
             return {
-                "status": "review",
-                "due": today + timedelta(days=1),
-                "interval": 1,
-                "ease": card.ease,
-                "lapses": card.lapses,
-                "reps": card.reps + 1,
-                "step_index": current_step,
+                "status": "relearning",
+                "due": today,
+                "interval": 0,
+                "ease": penalty["ease"],
+                "lapses": penalty["lapses"],
+                "reps": penalty["reps"],
+                "step_index": 0,
             }
+
+        new_ease = self.__apply_hint_good_ease(card, used_hint)
+
+        current_step = card.step_index if card.step_index is not None else 0
         next_step = current_step + 1
-        
-        if next_step >= self.relearning_steps: # schedule里也没有循环啊？在哪里循环？
+
+        if next_step >= self.relearning_steps:
             return {
                 "status": "review",
                 "due": today + timedelta(days=1),
                 "interval": 1,
-                "ease": card.ease,
+                "ease": new_ease,
                 "lapses": card.lapses,
                 "reps": card.reps + 1,
                 "step_index": None,
@@ -213,7 +198,7 @@ class Scheduler_v1:
             "status": "relearning",
             "due": today,
             "interval": 0,
-            "ease": card.ease,
+            "ease": new_ease,
             "lapses": card.lapses,
             "reps": card.reps + 1,
             "step_index": next_step,
