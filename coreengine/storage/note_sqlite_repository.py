@@ -34,7 +34,7 @@ class SqliteNoteRepository(NoteRepository):
             hint=row['hint'] if row['hint'] is not None else '',
         )
     
-    def add_note(self,note:Note):
+    def add_note(self,note:Note,autocommit:bool=True):
         if note.note_id is not None:
             raise ValueError("Note ID must be None")
         data=self.__serialize_note(note)
@@ -63,7 +63,8 @@ class SqliteNoteRepository(NoteRepository):
             data['hint'] if data['hint'] is not None else '',
         )
         )
-        self.__conn.commit()
+        if autocommit:
+            self.__conn.commit()
         return cursor.lastrowid
 
     def get_note(self,note_id:int)->Note:

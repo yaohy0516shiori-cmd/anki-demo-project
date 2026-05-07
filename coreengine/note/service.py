@@ -7,35 +7,58 @@ from .notemodels import Note
 from .utils import calculate_checksum
 from ..note_type.notetype import NoteType
 from ..note_type.type_registry import get_note_type
-from ..storage.note_sqlite_repository import SqliteNoteRepository
-from ..card.service import CardService
+from contextlib import nullcontext
+
 
 class NoteService:
-    def __init__(self, repository_note, card_service):
+    def __init__(self, repository_note, card_service,transaction_manager=None):
         if repository_note is None:
             raise ValueError("Repository note is not set")
         if card_service is None:
             raise ValueError("Card service is not set")
         self.__repository_note = repository_note
         self.__card_service = card_service
-   
+        self.__transaction_manager = transaction_manager
+
+    def __transaction(self):
+        if self.__transaction_manager is None:
+            return nullcontext()
+        return self.__transaction_manager.transaction()
+
     def create_note(self, note_type, fields, tags=None, note_id=None, hint=None, deck_id=1, today=None):
         # create a note: validate, deduplicate, construct Note, save to repo
         # deck_id is 0 by default, if deck_id is not set, the note will be created in the default deck
         hint=hint if hint is not None else ''
         tags=tags if tags is not None else []
+        if not isinstance(deck_id, int) or deck_id <= 0:
+            raise ValueError("Deck id must be a positive integer")
+
         self.__validate_fields(note_type, fields)
         if self.is_duplicate(fields,note_type.note_type_id,note_id):
             raise ValueError("The note is duplicate")
 
-        note=Note(note_type_id=note_type.note_type_id, fields=fields, tags=tags, hint=hint)
-        saved_note_id = self.__repository_note.add_note(note)
-        saved_note = self.__repository_note.get_note(saved_note_id)
+        use_transaction=self.__transaction() is not None
+        with self.__transaction():
+            note = Note(
+                note_type_id=note_type.note_type_id,
+                fields=fields,
+                tags=tags,
+                hint=hint,
+            )
 
-        if not isinstance(deck_id, int) or deck_id <= 0:
-            raise ValueError("Deck id must be a positive integer")
+            saved_note_id = self.__repository_note.add_note(
+                note,
+                auto_commit=not use_transaction,
+            )
 
-        self.__card_service.create_cards_from_note(saved_note, deck_id=deck_id, today=today)
+            saved_note = self.__repository_note.get_note(saved_note_id)
+
+            self.__card_service.create_cards_from_note(
+                saved_note,
+                deck_id=deck_id,
+                today=today,
+                auto_commit=not use_transaction,
+            )
 
         return saved_note_id
 

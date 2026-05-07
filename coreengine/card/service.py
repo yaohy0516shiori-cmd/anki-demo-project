@@ -10,7 +10,7 @@ class CardService:
         self.card_repo = card_repo
         self.note_repo = note_repo
 
-    def create_cards_from_note(self, note:Note, deck_id:int=1, today=None):
+    def create_cards_from_note(self, note:Note, deck_id:int=1, today=None, autocommit:bool=True):
         # Decide how many cards to generate from a note and save them
         if note.note_id is None:
             raise ValueError("Note id is required")
@@ -27,7 +27,7 @@ class CardService:
             due=default_today,
             created_at=now,
             updated_at=now)
-            create_cards.append(self.card_repo.add_card(card))
+            create_cards.append(self.card_repo.add_card(card, autocommit=autocommit))
         return create_cards
 
     def get_card(self, card_id):

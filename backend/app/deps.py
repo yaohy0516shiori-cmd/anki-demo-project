@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Generator
 from fastapi import FastAPI,Depends
-from coreengine.storage.sqlite_connection import create_connection, close_connection
+from coreengine.storage.sqlite_connection import create_connection, close_connection, SqliteTransactionManager
 from coreengine.storage.schema import init_db
 from coreengine.storage.note_sqlite_repository import SqliteNoteRepository
 from coreengine.storage.card_sqlite_repository import SqliteCardRepository
@@ -14,9 +14,10 @@ from coreengine.scheduler.simple_scheduler import Scheduler_v1
 from coreengine.study.service import StudyService
 import sqlite3
 from coreengine.deck.service import DeckService
-from coreengine.study.inmemoryrepo import InMemoryStudySessionRepository
+from coreengine.storage.session_sqlite_repository import SqliteStudySessionRepository
 
 DB_PATH=Path(__file__).parent.parent.parent / "database" / "anki_demo.db"
+
 
 def get_conn()->Generator[sqlite3.Connection,None,None]:
     conn=create_connection(str(DB_PATH))
@@ -25,6 +26,9 @@ def get_conn()->Generator[sqlite3.Connection,None,None]:
         yield conn
     finally:
         close_connection(conn)
+
+def get_transaction_manager(conn=Depends(get_conn)):
+    return SqliteTransactionManager(conn)
 
 def get_note_repo(conn=Depends(get_conn)):
     return SqliteNoteRepository(conn)
@@ -52,8 +56,9 @@ def get_card_service(
 def get_note_service(
     note_repo=Depends(get_note_repo),
     card_service=Depends(get_card_service),
+    transaction_manager=Depends(get_transaction_manager),
 ):
-    return NoteService(note_repo, card_service)
+    return NoteService(note_repo, card_service, transaction_manager)
 
 
 def get_deck_service(
@@ -72,7 +77,7 @@ def get_review_service(
 
 
 
-SESSION_REPO = InMemoryStudySessionRepository()
+SESSION_REPO = SqliteStudySessionRepository()
 
 def get_session_repo():
     return SESSION_REPO

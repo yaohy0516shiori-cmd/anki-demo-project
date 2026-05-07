@@ -42,7 +42,7 @@ class SqliteCardRepository(CardRepository):
             updated_at=row['updated_at'],
         )
     
-    def add_card(self,card:Card):
+    def add_card(self,card:Card,autocommit:bool=True):
         if card.card_id is not None:
             raise ValueError("Card ID must be None")
         if card.note_id is None:
@@ -78,7 +78,8 @@ class SqliteCardRepository(CardRepository):
             data['created_at'],
             data['updated_at'],
         ))
-        self.__conn.commit()
+        if autocommit:
+            self.__conn.commit()
         return self.get_card(cursor.lastrowid)
     
     def get_card(self,card_id:int)->Card:

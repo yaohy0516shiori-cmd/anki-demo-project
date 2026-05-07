@@ -71,6 +71,6 @@ def update_note(note_id: int, payload: NoteUpdate, note_service=Depends(get_note
 def delete_note(note_id: int, note_service=Depends(get_note_service)):
     try:
         result = note_service.delete_note(note_id)
-        return {"message": result}
+        return result
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

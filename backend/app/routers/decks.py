@@ -70,7 +70,7 @@ def delete_deck(deck_id: int, hard: bool = False, deck_service=Depends(get_deck_
         if hard:
             return deck_service.delete_deck_and_cards(deck_id)
         message = deck_service.delete_deck(deck_id)
-        return {"message": message}
+        return message
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

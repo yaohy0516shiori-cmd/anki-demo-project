@@ -6,14 +6,16 @@ class SqliteReviewLogRepository(ReviewLogRepository):
         self.__conn=conn
 
     def __serialize_log(self,review_log:ReviewLog)->dict:
+        def __date_to_str(value):
+            return value.isoformat() if hasattr(value, "isoformat") else value
         return {
             'card_id':review_log.card_id,
             'deck_id':review_log.deck_id,
             'rating':review_log.rating,
             'old_status':review_log.old_status,
             'new_status':review_log.new_status,
-            'old_due':review_log.old_due,
-            'new_due':review_log.new_due,
+            'old_due':__date_to_str(review_log.old_due),
+            'new_due':__date_to_str(review_log.new_due),
             'old_interval':review_log.old_interval,
             'new_interval':review_log.new_interval,
             'old_ease':review_log.old_ease,

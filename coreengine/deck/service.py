@@ -1,6 +1,4 @@
-from .repository import InmemoryDeckRepository
 from .deckmodel import Deck
-from ..card.service import CardService
 from datetime import date
 
 class DeckService:
