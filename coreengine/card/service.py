@@ -57,20 +57,44 @@ class CardService:
 
     def delete_cards_by_note_id(self, note_id:int):
         # delete all cards generated from a note
-        return self.card_repo.delete_cards_by_note_id(note_id)
+        if not isinstance(note_id, int) or note_id <= 0:
+            raise ValueError("Note id must be a positive integer")
+
+        deleted_count = self.card_repo.delete_cards_by_note_id(note_id)
+
+        return {
+            "message": f"deleted {deleted_count} cards for note {note_id}",
+            "note_id": note_id,
+            "deleted_card_count": deleted_count,
+        }
     
     def delete_cards_by_deck_id(self, deck_id: int) -> int:
         if not isinstance(deck_id, int) or deck_id <= 0:
             raise ValueError("Deck id must be a positive integer")
-        return self.card_repo.delete_cards_by_deck_id(deck_id)
 
+        deleted_count = self.card_repo.delete_cards_by_deck_id(deck_id)
+
+        return {
+            "message": f"deleted {deleted_count} cards from deck {deck_id}",
+            "deck_id": deck_id,
+            "deleted_card_count": deleted_count,
+        }
+        
     def move_note_cards_to_deck(self, note_id:int, deck_id:int) -> int:
         # Move all cards from a note to a deck
         if not isinstance(note_id, int) or note_id <= 0:
             raise ValueError("Note id must be a positive integer")
         if not isinstance(deck_id, int) or deck_id <= 0:
             raise ValueError("Deck id must be a positive integer")
-        return self.card_repo.move_note_cards_to_deck(note_id, deck_id)
+
+        moved_count = self.card_repo.move_note_cards_to_deck(note_id, deck_id)
+
+        return {
+            "message": f"moved {moved_count} cards from note {note_id} to deck {deck_id}",
+            "note_id": note_id,
+            "deck_id": deck_id,
+            "moved_card_count": moved_count,
+        }
     
     def move_cards_to_deck(self, from_deck_id:int, to_deck_id:int) -> int:
         # Move all cards from a deck to a new deck
@@ -78,7 +102,15 @@ class CardService:
             raise ValueError("From deck id must be a positive integer")
         if not isinstance(to_deck_id, int) or to_deck_id <= 0:
             raise ValueError("To deck id must be a positive integer")
-        return self.card_repo.move_cards_to_deck(from_deck_id, to_deck_id)
+
+        moved_count = self.card_repo.move_cards_to_deck(from_deck_id, to_deck_id)
+
+        return {
+            "message": f"moved {moved_count} cards from deck {from_deck_id} to deck {to_deck_id}",
+            "from_deck_id": from_deck_id,
+            "to_deck_id": to_deck_id,
+            "moved_card_count": moved_count,
+        }
 
     def reconcile_cards_for_note(self, note:Note, today=None):
         # synchronize existing cards with current note fields

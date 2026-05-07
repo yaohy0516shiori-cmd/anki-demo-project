@@ -164,8 +164,7 @@ class SqliteCardRepository(CardRepository):
         cursor=self.__conn.execute("""
         DELETE FROM card WHERE note_id=?
         """,(note_id,))
-        if cursor.rowcount==0:
-            raise ValueError("Card not found")
+        
         self.__conn.commit()
         return cursor.rowcount
     
@@ -190,8 +189,7 @@ class SqliteCardRepository(CardRepository):
         cursor=self.__conn.execute("""
         DELETE FROM card WHERE note_id=? AND template_ord=?
         """,(note_id,template_ord))
-        if cursor.rowcount==0:
-            raise ValueError("Card not found")
+        
         self.__conn.commit()
         return cursor.rowcount
     

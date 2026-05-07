@@ -19,30 +19,54 @@ class DeckService:
 
     def delete_deck(self, deck_id:int):
         # Safe delete: preserve cards by moving them to default deck
-        deck=self.__repository_deck.get_deck(deck_id)
-        
+        deck = self.__repository_deck.get_deck(deck_id)
+
         if self.__repository_deck.is_default_deck(deck_id):
             raise ValueError("Default deck cannot be deleted")
 
-        default_deck=self.__repository_deck.get_default_deck()
+        default_deck = self.__repository_deck.get_default_deck()
 
-        self.__card_service.move_cards_to_deck(deck.deck_id, default_deck.deck_id)
-        return self.__repository_deck.delete_deck(deck_id)
+        move_result = self.__card_service.move_cards_to_deck(
+            deck.deck_id,
+            default_deck.deck_id,
+        )
+
+        deleted_deck_count = self.__repository_deck.delete_deck(deck_id)
+
+        return {
+            "message": (
+                f"deleted deck {deck_id} and moved "
+                f"{move_result['moved_card_count']} cards to default deck"
+            ),
+            "deleted_deck_id": deck_id,
+            "deleted_deck_name": deck.deck_name,
+            "deleted_deck_count": deleted_deck_count,
+            "moved_card_count": move_result["moved_card_count"],
+            "target_deck_id": default_deck.deck_id,
+        }
     
     def delete_deck_and_cards(self, deck_id:int):
         # Hard delete: delete deck and all its cards
-        if not isinstance(deck_id,int) or deck_id<=0:
+        if not isinstance(deck_id, int) or deck_id <= 0:
             raise ValueError("Deck ID must be a positive integer")
+
         if self.__repository_deck.is_default_deck(deck_id):
             raise ValueError("Default deck cannot be deleted")
-        deck=self.__repository_deck.get_deck(deck_id)
-        delete_card_count=self.__card_service.delete_cards_by_deck_id(deck_id)
-        self.__repository_deck.delete_deck(deck_id)
+
+        deck = self.__repository_deck.get_deck(deck_id)
+
+        card_delete_result = self.__card_service.delete_cards_by_deck_id(deck_id)
+        deleted_deck_count = self.__repository_deck.delete_deck(deck_id)
 
         return {
-            'deleted_deck_id': deck_id,
-            'deleted_deck_name': deck.deck_name,
-            'deleted_card_count': delete_card_count
+            "message": (
+                f"deleted deck {deck_id} and "
+                f"{card_delete_result['deleted_card_count']} cards"
+            ),
+            "deleted_deck_id": deck_id,
+            "deleted_deck_name": deck.deck_name,
+            "deleted_deck_count": deleted_deck_count,
+            "deleted_card_count": card_delete_result["deleted_card_count"],
         }
         
     def get_all_decks(self):

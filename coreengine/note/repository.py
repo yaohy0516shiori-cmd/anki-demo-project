@@ -74,7 +74,7 @@ class InMemoryNoteRepository(NoteRepository):
         elif note_id not in self.__notes:
             raise ValueError("Note not found")
         del self.__notes[note_id]
-        return "Note deleted successfully"
+        return 1
     
     def get_all_notes(self):
         # get all notes from the repository

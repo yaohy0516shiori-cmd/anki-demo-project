@@ -85,7 +85,7 @@ class SqliteDeckRepository(DeckRepository):
         if cursor.rowcount==0:
             raise ValueError("Deck not found")
         self.__conn.commit()
-        return deck_id
+        return cursor.rowcount
     
     def get_all_decks(self):
         cursor=self.__conn.execute("""

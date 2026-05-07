@@ -80,9 +80,28 @@ class NoteService:
 
     def delete_note(self, note_id):
         # delete a note from the repository
+        if not isinstance(note_id, int) or note_id <= 0:
+            raise ValueError("Note id must be a positive integer")
+
+        card_delete_result = {
+            "deleted_card_count": 0,
+            "message": f"deleted 0 cards for note {note_id}",
+        }
+
         if self.__card_service is not None:
-            self.__card_service.delete_cards_by_note_id(note_id)
-        return self.__repository_note.delete_note(note_id)
+            card_delete_result = self.__card_service.delete_cards_by_note_id(note_id)
+
+        deleted_note_count = self.__repository_note.delete_note(note_id)
+
+        return {
+            "message": (
+                f"deleted {deleted_note_count} note "
+                f"and {card_delete_result['deleted_card_count']} cards for note {note_id}"
+            ),
+            "note_id": note_id,
+            "deleted_note_count": deleted_note_count,
+            "deleted_card_count": card_delete_result["deleted_card_count"],
+        }
         
     def is_duplicate(self, fields, note_type_id, exclude_note_id=None):
         # check if the note is duplicate

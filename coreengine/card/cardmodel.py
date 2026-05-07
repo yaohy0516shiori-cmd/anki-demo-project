@@ -81,3 +81,20 @@ class Card:
     def touch(self):
         # update the updated time of the card
         self.updated_at=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    
+    def to_dict(self):
+        return {
+            "card_id": self.card_id,
+            "note_id": self.note_id,
+            "deck_id": self.deck_id,
+            "template_ord": self.template_ord,
+            "status": self.status,
+            "due": self.due.isoformat() if hasattr(self.due, "isoformat") else self.due,
+            "interval": self.interval,
+            "ease": self.ease,
+            "reps": self.reps,
+            "lapses": self.lapses,
+            "step_index": self.step_index,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }

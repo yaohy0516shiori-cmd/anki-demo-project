@@ -99,7 +99,7 @@ class InMemoryCardRepository(CardRepository):
                 deleted_id.append(card_id)
         for card_id in deleted_id:
             del self.__cards[card_id]
-        return deleted_id
+        return len(deleted_id)
     
     def delete_cards_by_note_id_and_ord(self,note_id:int,template_ord:int):
         # delete all cards from the repository by note id and template ord
@@ -109,20 +109,20 @@ class InMemoryCardRepository(CardRepository):
                 deleted_id.append(card_id)
         for card_id in deleted_id:
             del self.__cards[card_id]
-        return deleted_id
+        return len(deleted_id)
     
     def delete_card(self,card_id:int):
         # delete a card from the repository by card id
         if card_id not in self.__cards:
             raise ValueError("Card not found")
         del self.__cards[card_id]
-        return True
+        return 1
     
     def clear_cards(self):
         # clear all cards from the repository
         # safety check
         self.__cards.clear()
-        return True
+        return len(self.__cards)
     
     def count_cards(self):
         # count the number of cards in the repository

@@ -23,3 +23,7 @@ class NoteRepository(ABC):
     @abstractmethod
     def get_all_notes(self) -> list[Note]:
         pass
+
+    @abstractmethod
+    def clear_cards(self) -> int:
+        pass

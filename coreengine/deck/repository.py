@@ -53,7 +53,7 @@ class InmemoryDeckRepository(DeckRepository):
         if deck_id == 1:
             raise ValueError("Default deck cannot be deleted")
         del self.__decks[deck_id]
-        return deck_id
+        return 1
     
     def get_all_decks(self):
         return [self.__deserialize_deck(deck) for deck in self.__decks.values()]

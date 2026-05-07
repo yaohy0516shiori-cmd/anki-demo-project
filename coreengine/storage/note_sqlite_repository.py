@@ -119,7 +119,7 @@ class SqliteNoteRepository(NoteRepository):
             raise ValueError("Note not found")
 
         self.__conn.commit()
-        return note_id
+        return cursor.rowcount
 
     def get_all_notes(self):
         rows = self.__conn.execute(

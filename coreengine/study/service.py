@@ -1,12 +1,11 @@
-from collections import deque
-from datetime import datetime,timezone,date
+from datetime import datetime, timezone, date
+
 from ..card.cardmodel import Card
-from ..storage.card_sqlite_repository import SqliteCardRepository
-from ..reviewlogger.repository import ReviewLoggerRepository
+from ..card.card_repository import CardRepository
+from ..note.note_repository import NoteRepository
+from ..deck.deck_repository import DeckRepository
 from ..reviewlogger.service import ReviewLoggerService
 from ..render.card_render import render_card, render_hint
-from ..storage.note_sqlite_repository import SqliteNoteRepository
-from ..storage.deck_sqlite_repository import SqliteDeckRepository
 from .session_repository import SessionRepository
 from .session import Session
 
@@ -17,10 +16,10 @@ class StudyService:
     # Inject repositories/services and initialize three queues
     def __init__(
         self,
-        card_repo:SqliteCardRepository,
+        card_repo:CardRepository,
         review_service:ReviewLoggerService,
-        note_repo:SqliteNoteRepository,
-        deck_repo:SqliteDeckRepository,
+        note_repo:NoteRepository,
+        deck_repo:DeckRepository,
         session_repo:SessionRepository
         ):
         self.__card_repo=card_repo
@@ -115,10 +114,14 @@ class StudyService:
             },
             "note": {
                 "note_id": note.note_id,
-                "content": note.content,
+                "note_type_id": note.note_type_id,
+                "fields": note.fields,
+                "tags": note.tags,
                 "hint": note.hint,
-                "created_at": note.created_at.isoformat(),
-                "updated_at": note.updated_at.isoformat(),
+                "sort_field": note.sort_field,
+                "checksum": note.checksum,
+                "created_at": note.created_at,
+                "updated_at": note.updated_at,
             },
             "front": rendered["front"],
             "status": card.status,
