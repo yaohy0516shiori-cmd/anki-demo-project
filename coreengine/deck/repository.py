@@ -1,7 +1,8 @@
 from .deckmodel import Deck
 from datetime import datetime, timezone
 
-class InmemoryDeckRepository:
+from .deck_repository import DeckRepository
+class InmemoryDeckRepository(DeckRepository):
     def __init__(self):
         self.__decks={
             1:Deck(deck_id=1, deck_name="Default", deck_description="System Default Deck").to_dict()

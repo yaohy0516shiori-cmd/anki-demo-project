@@ -1,7 +1,7 @@
 import sqlite3
 from ..reviewlogger.review import ReviewLog
-
-class SqliteReviewLogRepository:
+from ..reviewlogger.log_repository import ReviewLogRepository
+class SqliteReviewLogRepository(ReviewLogRepository):
     def __init__(self,conn:sqlite3.Connection):
         self.__conn=conn
 

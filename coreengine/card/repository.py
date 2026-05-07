@@ -1,7 +1,8 @@
 from .cardmodel import Card
 from datetime import date
+from .card_repository import CardRepository
 # Store cards in memory. will be replaced by database in the future
-class InMemoryCardRepository:
+class InMemoryCardRepository(CardRepository):
     def __init__(self):
         self.__cards={}
         self.__next_id=1

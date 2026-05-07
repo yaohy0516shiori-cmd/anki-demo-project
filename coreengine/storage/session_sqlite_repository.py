@@ -48,6 +48,7 @@ class SqliteStudySessionRepository(SessionRepository):
         data=self.__serialize_session(session)
         cursor=self.__conn.execute("""
         INSERT INTO study_session (
+            session_id,
             deck_id,
             today,
             status,
@@ -59,9 +60,10 @@ class SqliteStudySessionRepository(SessionRepository):
             current_back_revealed,
             created_at,
             updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
+            data['session_id'],
             data['deck_id'],
             data['today'],
             data['status'],
@@ -75,9 +77,11 @@ class SqliteStudySessionRepository(SessionRepository):
             data['updated_at']
         ))
         self.__conn.commit()
-        return self.get_session(cursor.lastrowid)
+        return self.get_session(data['session_id'])
     
-    def get_session(self, session_id: int) -> Session:
+    def get_session(self, session_id: str) -> Session:
+        if not isinstance(session_id, str):
+            raise ValueError("Session ID must be a string")
         row=self.__conn.execute("""
         SELECT * FROM study_session WHERE session_id=?
         """,(session_id,)).fetchone()
@@ -106,10 +110,13 @@ class SqliteStudySessionRepository(SessionRepository):
         self.__conn.commit()
         return self.get_session(session.session_id)
     
-    def delete_session(self, session_id: int) -> None:
+    def delete_session(self, session_id: str) -> None:
+        if not isinstance(session_id, str):
+            raise ValueError("Session ID must be a string")
         cursor=self.__conn.execute("""
         DELETE FROM study_session WHERE session_id=?
         """,(session_id,))
         if cursor.rowcount==0:
             raise ValueError("Session not found")
         self.__conn.commit()
+        return session_id

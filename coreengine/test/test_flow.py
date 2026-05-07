@@ -8,7 +8,7 @@ from coreengine.storage.note_sqlite_repository import SqliteNoteRepository
 from coreengine.storage.card_sqlite_repository import SqliteCardRepository
 from coreengine.storage.deck_sqlite_repository import SqliteDeckRepository
 from coreengine.storage.reviewlog_sqlite_repository import SqliteReviewLogRepository
-
+from coreengine.study.inmemoryrepo import InMemoryStudySessionRepository
 from coreengine.note.service import NoteService
 from coreengine.card.service import CardService
 from coreengine.reviewlogger.service import ReviewLoggerService
@@ -35,7 +35,14 @@ def app_ctx(tmp_path):
     # 用 1/1 是为了让测试更短
     scheduler = Scheduler_v1(learning_steps=1, relearning_steps=1)
     review_service = ReviewLoggerService(card_repo, review_repo, scheduler)
-    study_service = StudyService(card_repo, review_service, note_repo, deck_repo)
+    session_repo = InMemoryStudySessionRepository()
+    study_service = StudyService(
+        card_repo,
+        review_service,
+        note_repo,
+        deck_repo,
+        session_repo,
+    )
 
     ctx = {
         "conn": conn,
@@ -143,22 +150,24 @@ def test_study_session_flow_and_review_log(app_ctx):
     )
 
     session_info = app_ctx["study_service"].start_study_session(deck_id=1, today=today)
+    session_id = session_info["session_id"]
+
     assert session_info["deck_id"] == 1
     assert session_info["new_queue"] == 1
 
-    next_card = app_ctx["study_service"].get_next_card()
+    next_card = app_ctx["study_service"].get_next_card(session_id)
     assert next_card["front"] == "front-study"
     assert next_card["status"] == "new"
     assert next_card["hint_available"] is True
 
-    hint = app_ctx["study_service"].reveal_hint_of_current_card()
+    hint = app_ctx["study_service"].reveal_hint_of_current_card(session_id)
     assert hint == "hint-study"
 
-    back = app_ctx["study_service"].reveal_back_of_current_card()
+    back = app_ctx["study_service"].reveal_back_of_current_card(session_id)
     assert back == "back-study"
 
     # 第一次 good: new -> learning
-    result_1 = app_ctx["study_service"].rate_current_card("good")
+    result_1 = app_ctx["study_service"].rate_current_card(session_id, "good")
     card_1 = result_1["card"]
     log_1 = result_1["log"]
 
@@ -170,10 +179,10 @@ def test_study_session_flow_and_review_log(app_ctx):
     assert log_1.hint_used is True
 
     # 第二次 good: learning -> review
-    next_card_again = app_ctx["study_service"].get_next_card()
+    next_card_again = app_ctx["study_service"].get_next_card(session_id)
     assert next_card_again["front"] == "front-study"
 
-    result_2 = app_ctx["study_service"].rate_current_card("good")
+    result_2 = app_ctx["study_service"].rate_current_card(session_id, "good")
     card_2 = result_2["card"]
     log_2 = result_2["log"]
 

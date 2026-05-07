@@ -73,3 +73,11 @@ def delete_deck(deck_id: int, hard: bool = False, deck_service=Depends(get_deck_
         return {"message": message}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/{deck_id}/cards")
+def get_deck_cards(deck_id: int, deck_service=Depends(get_deck_service)):
+    try:
+        cards = deck_service.get_cards_by_deck_id(deck_id)
+        return [card.to_dict() for card in cards]
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))

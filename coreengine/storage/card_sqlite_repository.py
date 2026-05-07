@@ -2,8 +2,8 @@ from ..card.cardmodel import Card
 import sqlite3
 from datetime import datetime,date
 from typing import Optional
-
-class SqliteCardRepository:
+from ..card.card_repository import CardRepository
+class SqliteCardRepository(CardRepository):
     def __init__(self,conn:sqlite3.Connection):
         self.__conn=conn
     
@@ -167,14 +167,14 @@ class SqliteCardRepository:
         if cursor.rowcount==0:
             raise ValueError("Card not found")
         self.__conn.commit()
-        return f"Deleted {cursor.rowcount} cards successfully"
+        return cursor.rowcount
     
     def clear_cards(self):
-        self.__conn.execute("""
+        cursor=self.__conn.execute("""
         DELETE FROM card
         """)
         self.__conn.commit()
-        return "Cards cleared successfully"
+        return cursor.rowcount
     
     def count_cards(self):
         row=self.__conn.execute("""
@@ -193,7 +193,7 @@ class SqliteCardRepository:
         if cursor.rowcount==0:
             raise ValueError("Card not found")
         self.__conn.commit()
-        return f"Deleted {cursor.rowcount} cards successfully"
+        return cursor.rowcount
     
     def delete_card(self,card_id:int):
         if not isinstance(card_id,int):
@@ -204,7 +204,7 @@ class SqliteCardRepository:
         if cursor.rowcount==0:
             raise ValueError("Card not found")
         self.__conn.commit()
-        return f"Deleted {cursor.rowcount} card successfully"
+        return cursor.rowcount
     
     def list_all_cards(self)->list[Card]:
         rows=self.__conn.execute("""

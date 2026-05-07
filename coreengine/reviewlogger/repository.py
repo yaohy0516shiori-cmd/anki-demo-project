@@ -1,9 +1,9 @@
 from .review import ReviewLog
 from typing import List
 from datetime import datetime
-
+from .log_repository import ReviewLogRepository
 # store review logs in memory
-class ReviewLoggerRepository:
+class InMemoryReviewLogRepository(ReviewLogRepository):
     def __init__(self):
         self.__logs={}
         self.__next_id=1

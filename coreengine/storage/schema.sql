@@ -99,7 +99,7 @@ CREATE INDEX IF NOT EXISTS idx_review_log_card_time ON review_log (card_id,revie
 CREATE INDEX IF NOT EXISTS idx_review_log_deck_time ON review_log (deck_id,review_time);
 
 CREATE TABLE IF NOT EXISTS study_session (
-    session_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT PRIMARY KEY,
     deck_id INTEGER NOT NULL,
     today TEXT NOT NULL,
     status TEXT NOT NULL,

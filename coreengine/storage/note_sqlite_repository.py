@@ -3,8 +3,8 @@ import sqlite3
 from datetime import datetime,date
 
 from ..note.notemodels import Note
-
-class SqliteNoteRepository:
+from ..note.note_repository import NoteRepository
+class SqliteNoteRepository(NoteRepository):
     def __init__(self,conn:sqlite3.Connection):
         self.__conn=conn
     
@@ -119,7 +119,7 @@ class SqliteNoteRepository:
             raise ValueError("Note not found")
 
         self.__conn.commit()
-        return "Note deleted successfully"
+        return note_id
 
     def get_all_notes(self):
         rows = self.__conn.execute(

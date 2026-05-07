@@ -7,7 +7,7 @@ from ..reviewlogger.service import ReviewLoggerService
 from ..render.card_render import render_card, render_hint
 from ..storage.note_sqlite_repository import SqliteNoteRepository
 from ..storage.deck_sqlite_repository import SqliteDeckRepository
-from .inmemoryrepo import InMemoryStudySessionRepository
+from .session_repository import SessionRepository
 from .session import Session
 
 # Study session coordinator.
@@ -21,7 +21,7 @@ class StudyService:
         review_service:ReviewLoggerService,
         note_repo:SqliteNoteRepository,
         deck_repo:SqliteDeckRepository,
-        session_repo:InMemoryStudySessionRepository
+        session_repo:SessionRepository
         ):
         self.__card_repo=card_repo
         self.__note_repo=note_repo
@@ -60,7 +60,7 @@ class StudyService:
         session.learning_queue=[card.card_id for card in learning_cards]
         session.review_queue=[card.card_id for card in review_cards]
         session.new_queue=[card.card_id for card in new_cards]
-        self.__session_repo.create_session(session)
+        session=self.__session_repo.create_session(session)
 
         return {
             "session_id":session.session_id,
@@ -100,8 +100,26 @@ class StudyService:
 
         return {
             "session_id": session.session_id,
-            "card": card,
-            "note": note,
+            "card": {
+                "card_id": card.card_id,
+                "note_id": card.note_id,
+                "deck_id": card.deck_id,
+                "template_ord": card.template_ord,
+                "status": card.status,
+                "due": card.due.isoformat(),
+                "interval": card.interval,
+                "ease": card.ease,
+                "reps": card.reps,
+                "lapses": card.lapses,
+                "step_index": card.step_index,
+            },
+            "note": {
+                "note_id": note.note_id,
+                "content": note.content,
+                "hint": note.hint,
+                "created_at": note.created_at.isoformat(),
+                "updated_at": note.updated_at.isoformat(),
+            },
             "front": rendered["front"],
             "status": card.status,
             "step_index": card.step_index,

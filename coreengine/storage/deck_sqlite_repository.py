@@ -1,7 +1,7 @@
 import sqlite3
 from ..deck.deckmodel import Deck
-
-class SqliteDeckRepository:
+from ..deck.deck_repository import DeckRepository
+class SqliteDeckRepository(DeckRepository):
     def __init__(self, conn:sqlite3.Connection):
         self.__conn=conn
     
@@ -85,7 +85,7 @@ class SqliteDeckRepository:
         if cursor.rowcount==0:
             raise ValueError("Deck not found")
         self.__conn.commit()
-        return f"Deck{deck_id} deleted successfully"
+        return deck_id
     
     def get_all_decks(self):
         cursor=self.__conn.execute("""
@@ -112,7 +112,7 @@ class SqliteDeckRepository:
         cursor=self.__conn.execute("DELETE FROM deck")
         self.__conn.commit()
         self.__ensure_default_deck()
-        return "Decks cleared successfully"
+        return cursor.rowcount
     
     def __ensure_default_deck(self):
         row=self.__conn.execute("""
