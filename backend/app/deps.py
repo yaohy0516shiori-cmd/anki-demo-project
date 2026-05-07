@@ -13,6 +13,8 @@ from coreengine.reviewlogger.service import ReviewLoggerService
 from coreengine.scheduler.simple_scheduler import Scheduler_v1
 from coreengine.study.service import StudyService
 import sqlite3
+from coreengine.deck.service import DeckService
+from coreengine.study.inmemoryrepo import InMemoryStudySessionRepository
 
 DB_PATH=Path(__file__).parent.parent.parent / "database" / "anki_demo.db"
 
@@ -69,10 +71,17 @@ def get_review_service(
     return ReviewLoggerService(card_repo, review_repo, scheduler)
 
 
+
+SESSION_REPO = InMemoryStudySessionRepository()
+
+def get_session_repo():
+    return SESSION_REPO
+
 def get_study_service(
     card_repo=Depends(get_card_repo),
     review_service=Depends(get_review_service),
     note_repo=Depends(get_note_repo),
     deck_repo=Depends(get_deck_repo),
+    session_repo=Depends(get_session_repo),
 ):
-    return StudyService(card_repo, review_service, note_repo, deck_repo)
+    return StudyService(card_repo, review_service, note_repo, deck_repo, session_repo)

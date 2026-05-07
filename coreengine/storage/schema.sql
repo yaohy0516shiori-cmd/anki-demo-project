@@ -97,3 +97,27 @@ CREATE INDEX IF NOT EXISTS idx_review_log_deck_id ON review_log (deck_id);
 CREATE INDEX IF NOT EXISTS idx_review_log_card_time ON review_log (card_id,review_time);
 -- index on deck_id and review_time used for search review logs by deck_id and review_time
 CREATE INDEX IF NOT EXISTS idx_review_log_deck_time ON review_log (deck_id,review_time);
+
+CREATE TABLE IF NOT EXISTS study_session (
+    session_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    deck_id INTEGER NOT NULL,
+    today TEXT NOT NULL,
+    status TEXT NOT NULL,
+
+    learning_queue TEXT NOT NULL DEFAULT '[]',
+    review_queue TEXT NOT NULL DEFAULT '[]',
+    new_queue TEXT NOT NULL DEFAULT '[]',
+
+    current_card_id INTEGER,
+    current_hint_used INTEGER NOT NULL DEFAULT 0,
+    current_back_revealed INTEGER NOT NULL DEFAULT 0,
+
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+
+    FOREIGN KEY(deck_id) REFERENCES deck(deck_id)
+);
+-- index on deck_id used for search study sessions by deck_id
+CREATE INDEX IF NOT EXISTS idx_study_session_deck_id ON study_session (deck_id);
+-- index on today used for search study sessions by today
+CREATE INDEX IF NOT EXISTS idx_study_session_today ON study_session (today);

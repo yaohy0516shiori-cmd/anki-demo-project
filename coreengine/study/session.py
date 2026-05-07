@@ -5,8 +5,9 @@ from uuid import uuid4
 
 @dataclass
 class Session:
-    session_id: str = field(default_factory=lambda: str(uuid4()))
+    today: date
     deck_id: int
+    session_id: str = field(default_factory=lambda: str(uuid4()))
     status: str = "active"
     learning_queue: list[int] = field(default_factory=list)
     review_queue: list[int] = field(default_factory=list)
@@ -14,7 +15,6 @@ class Session:
     current_card_id: Optional[int] = None
     current_hint_used: bool = False
     current_back_revealed: bool = False
-    today: date
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
 

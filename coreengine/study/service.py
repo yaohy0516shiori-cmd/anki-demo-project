@@ -57,9 +57,9 @@ class StudyService:
         new_cards.sort(key=self.__queue_sort_key)
 
         session=Session.create(deck_id, resolved_today)
-        session.learning_queue=learning_cards
-        session.review_queue=review_cards
-        session.new_queue=new_cards
+        session.learning_queue=[card.card_id for card in learning_cards]
+        session.review_queue=[card.card_id for card in review_cards]
+        session.new_queue=[card.card_id for card in new_cards]
         self.__session_repo.create_session(session)
 
         return {
