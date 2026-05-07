@@ -19,7 +19,7 @@ class NoteService:
         self.__repository_note = repository_note
         self.__card_service = card_service
    
-    def create_note(self, note_type, fields, tags=None, note_id=None, hint=None, today=None):
+    def create_note(self, note_type, fields, tags=None, note_id=None, hint=None, deck_id=1, today=None):
         # create a note: validate, deduplicate, construct Note, save to repo
         # deck_id is 0 by default, if deck_id is not set, the note will be created in the default deck
         hint=hint if hint is not None else ''
@@ -32,7 +32,10 @@ class NoteService:
         saved_note_id = self.__repository_note.add_note(note)
         saved_note = self.__repository_note.get_note(saved_note_id)
 
-        self.__card_service.create_cards_from_note(saved_note,deck_id=1,today=today)
+        if not isinstance(deck_id, int) or deck_id <= 0:
+            raise ValueError("Deck id must be a positive integer")
+
+        self.__card_service.create_cards_from_note(saved_note, deck_id=deck_id, today=today)
 
         return saved_note_id
 

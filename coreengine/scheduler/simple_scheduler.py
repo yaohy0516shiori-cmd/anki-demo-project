@@ -52,8 +52,9 @@ class Scheduler_v1:
         return max(1.3, round(card.ease - self.hint_good_ease_penalty, 2))
     # Core scheduling algorithm. It only computes the next state and does not save
     # Unified scheduling entry, dispatch by card.status
-    def schedule(self,card:Card,rating:str,today:date | None=None,review_context:dict={}) -> dict:
-        use_hint=bool(review_context and review_context.get('hint_used'))
+    def schedule(self,card:Card,rating:str,today:date | None=None,review_context:dict|None=None) -> dict:
+        review_context = review_context or {}
+        use_hint = bool(review_context.get("hint_used"))
         if rating not in self.valid_ratings:
             raise ValueError(f"Invalid rating: {rating}")
         
