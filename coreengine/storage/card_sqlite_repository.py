@@ -42,7 +42,7 @@ class SqliteCardRepository(CardRepository):
             updated_at=row['updated_at'],
         )
     
-    def add_card(self,card:Card,autocommit:bool=True):
+    def add_card(self,card:Card):
         if card.card_id is not None:
             raise ValueError("Card ID must be None")
         if card.note_id is None:
@@ -78,8 +78,6 @@ class SqliteCardRepository(CardRepository):
             data['created_at'],
             data['updated_at'],
         ))
-        if autocommit:
-            self.__conn.commit()
         return self.get_card(cursor.lastrowid)
     
     def get_card(self,card_id:int)->Card:
@@ -126,7 +124,6 @@ class SqliteCardRepository(CardRepository):
         ))
         if cursor.rowcount==0:
             raise ValueError("Card not found")
-        self.__conn.commit()
         return self.get_card(card.card_id)
 
     def get_cards_by_note_id(self,note_id:int)->Optional[list[Card]]:
@@ -165,15 +162,14 @@ class SqliteCardRepository(CardRepository):
         cursor=self.__conn.execute("""
         DELETE FROM card WHERE note_id=?
         """,(note_id,))
-        
-        self.__conn.commit()
+        if cursor.rowcount==0:
+            raise ValueError("Card not found")
         return cursor.rowcount
     
     def clear_cards(self):
         cursor=self.__conn.execute("""
         DELETE FROM card
         """)
-        self.__conn.commit()
         return cursor.rowcount
     
     def count_cards(self):
@@ -191,7 +187,8 @@ class SqliteCardRepository(CardRepository):
         DELETE FROM card WHERE note_id=? AND template_ord=?
         """,(note_id,template_ord))
         
-        self.__conn.commit()
+        if cursor.rowcount==0:
+            raise ValueError("Card not found")
         return cursor.rowcount
     
     def delete_card(self,card_id:int):
@@ -202,7 +199,6 @@ class SqliteCardRepository(CardRepository):
         """,(card_id,))
         if cursor.rowcount==0:
             raise ValueError("Card not found")
-        self.__conn.commit()
         return cursor.rowcount
     
     def list_all_cards(self)->list[Card]:
@@ -241,7 +237,8 @@ class SqliteCardRepository(CardRepository):
         rows=self.__conn.execute("""
         UPDATE card SET deck_id=? WHERE note_id=? AND deck_id!=?
         """,(deck_id,note_id,deck_id))
-        self.__conn.commit()
+        if rows.rowcount==0:
+            raise ValueError("Card not found")
         return rows.rowcount
     
     def move_cards_to_deck(self,from_deck_id:int,to_deck_id:int)->list[Card]:
@@ -254,8 +251,9 @@ class SqliteCardRepository(CardRepository):
         
         rows=self.__conn.execute("""
         UPDATE card SET deck_id=? WHERE deck_id=?
-        """,(to_deck_id,from_deck_id))
-        self.__conn.commit()
+        """,(to_deck_id,from_deck_id))  
+        if rows.rowcount==0:
+            raise ValueError("Card not found")
         return rows.rowcount
 
     def delete_cards_by_deck_id(self, deck_id: int) -> int:
@@ -265,5 +263,4 @@ class SqliteCardRepository(CardRepository):
         cursor = self.__conn.execute("""
         DELETE FROM card WHERE deck_id = ?
         """, (deck_id,))
-        self.__conn.commit()
         return cursor.rowcount

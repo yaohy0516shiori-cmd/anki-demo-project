@@ -21,11 +21,12 @@ class NoteService:
         self.__transaction_manager = transaction_manager
 
     def __transaction(self):
+        # used to manage the transaction
         if self.__transaction_manager is None:
             return nullcontext()
         return self.__transaction_manager.transaction()
 
-    def create_note(self, note_type, fields, tags=None, note_id=None, hint=None, deck_id=1, today=None):
+    def create_note(self, note_type, fields, tags=None, hint=None, deck_id=1, today=None):
         # create a note: validate, deduplicate, construct Note, save to repo
         # deck_id is 0 by default, if deck_id is not set, the note will be created in the default deck
         hint=hint if hint is not None else ''
@@ -34,10 +35,10 @@ class NoteService:
             raise ValueError("Deck id must be a positive integer")
 
         self.__validate_fields(note_type, fields)
-        if self.is_duplicate(fields,note_type.note_type_id,note_id):
+        if self.is_duplicate(fields,note_type.note_type_id):
             raise ValueError("The note is duplicate")
 
-        use_transaction=self.__transaction() is not None
+        use_transaction=self.__transaction_manager is not None
         with self.__transaction():
             note = Note(
                 note_type_id=note_type.note_type_id,
@@ -91,13 +92,14 @@ class NoteService:
         note.tags=new_tags
         note.hint=new_hint
         note.refresh()
+        use_transaction=self.__transaction_manager is not None
+        with self.__transaction():
+            updated_note_id = self.__repository_note.update_note(note,auto_commit=not use_transaction)
+            updated_note = self.__repository_note.get_note(updated_note_id)
 
-        updated_note_id = self.__repository_note.update_note(note)
-        updated_note = self.__repository_note.get_note(updated_note_id)
-
-        # it means 
-        if old_fields!=new_fields and note_type.kind=='cloze':
-            self.__card_service.reconcile_cards_for_note(updated_note, today=today)
+            # it means the note is a cloze note and the fields have changed, so we need to reconcile the cards
+            if old_fields!=new_fields:
+                self.__card_service.reconcile_cards_for_note(updated_note, today=today, auto_commit=not use_transaction)
 
         return updated_note_id
 
@@ -113,8 +115,10 @@ class NoteService:
 
         if self.__card_service is not None:
             card_delete_result = self.__card_service.delete_cards_by_note_id(note_id)
-
-        deleted_note_count = self.__repository_note.delete_note(note_id)
+        use_transaction=self.__transaction_manager is not None
+        with self.__transaction():
+            deleted_note_count = self.__repository_note.delete_note(note_id,auto_commit=not use_transaction)
+            
 
         return {
             "message": (

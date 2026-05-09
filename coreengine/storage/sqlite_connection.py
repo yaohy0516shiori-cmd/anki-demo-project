@@ -20,10 +20,14 @@ class SqliteTransactionManager:
     @contextmanager
     def transaction(self):
         try:
+            # start a transaction
             self.__conn.execute("BEGIN")
+            # stop, yield to the caller
             yield
         except Exception:
+            # if an error occurs, rollback the transaction
             self.__conn.rollback()
             raise
         else:
+            # if the transaction is successful, commit the transaction
             self.__conn.commit()

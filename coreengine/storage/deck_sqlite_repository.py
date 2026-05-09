@@ -41,7 +41,6 @@ class SqliteDeckRepository(DeckRepository):
             data['created_at'], 
             data['updated_at']
         ))
-        self.__conn.commit()
         return self.get_deck(cursor.lastrowid)
     
     def get_deck(self, deck_id:int):
@@ -73,7 +72,6 @@ class SqliteDeckRepository(DeckRepository):
         ))
         if cursor.rowcount==0:
             raise ValueError("Deck not found")
-        self.__conn.commit()
         return self.get_deck(deck.deck_id)
     
     def delete_deck(self, deck_id:int):
@@ -84,7 +82,6 @@ class SqliteDeckRepository(DeckRepository):
         """,(deck_id,))
         if cursor.rowcount==0:
             raise ValueError("Deck not found")
-        self.__conn.commit()
         return cursor.rowcount
     
     def get_all_decks(self):
@@ -110,7 +107,6 @@ class SqliteDeckRepository(DeckRepository):
     
     def clear_decks(self):
         cursor=self.__conn.execute("DELETE FROM deck")
-        self.__conn.commit()
         self.__ensure_default_deck()
         return cursor.rowcount
     
@@ -133,7 +129,6 @@ class SqliteDeckRepository(DeckRepository):
             CURRENT_TIMESTAMP
             )
             """)
-            self.__conn.commit()
             return self.get_deck(1)
         return self.__deserialize_deck(row)
     

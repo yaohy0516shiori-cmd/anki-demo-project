@@ -103,7 +103,6 @@ class SqliteReviewLogRepository(ReviewLogRepository):
             data['review_time'])
             )
         log_id=cursor.lastrowid
-        self.__conn.commit()
         return self.get_log(log_id)
     
     def get_log(self,review_log_id:int)->ReviewLog:
@@ -156,22 +155,18 @@ class SqliteReviewLogRepository(ReviewLogRepository):
         data['hint_used'],
         data['review_time'],
         review_log.review_log_id))
-        self.__conn.commit()
     
     def delete_log(self,review_log_id:int):
         raise NotImplementedError("V1 does not support deleting review logs")
 
     def get_logs_by_card_id(self,card_id:int)->list[ReviewLog]:
         rows=self.__conn.execute("SELECT * FROM review_log WHERE card_id=?", (card_id,)).fetchall()
-        self.__conn.commit()
         return [self.__deserialize_log(row) for row in rows]
     
     def get_all_logs(self)->list[ReviewLog]:
         rows=self.__conn.execute("SELECT * FROM review_log").fetchall()
-        self.__conn.commit()
         return [self.__deserialize_log(row) for row in rows]
     
     def count_logs(self)->int:
         row=self.__conn.execute("SELECT COUNT(*) FROM review_log").fetchone()
-        self.__conn.commit()
         return row[0]

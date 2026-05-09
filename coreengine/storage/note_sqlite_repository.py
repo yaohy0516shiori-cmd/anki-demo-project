@@ -34,7 +34,7 @@ class SqliteNoteRepository(NoteRepository):
             hint=row['hint'] if row['hint'] is not None else '',
         )
     
-    def add_note(self,note:Note,autocommit:bool=True):
+    def add_note(self,note:Note):
         if note.note_id is not None:
             raise ValueError("Note ID must be None")
         data=self.__serialize_note(note)
@@ -63,8 +63,6 @@ class SqliteNoteRepository(NoteRepository):
             data['hint'] if data['hint'] is not None else '',
         )
         )
-        if autocommit:
-            self.__conn.commit()
         return cursor.lastrowid
 
     def get_note(self,note_id:int)->Note:
@@ -104,7 +102,6 @@ class SqliteNoteRepository(NoteRepository):
 
         if cursor.rowcount==0:
             raise ValueError("Note not found")
-        self.__conn.commit()
         return note.note_id
     
     def delete_note(self,note_id:int):
@@ -119,12 +116,12 @@ class SqliteNoteRepository(NoteRepository):
         if cursor.rowcount == 0:
             raise ValueError("Note not found")
 
-        self.__conn.commit()
+        if cursor.rowcount==0:
+            raise ValueError("Note not found")
         return cursor.rowcount
 
     def get_all_notes(self):
         rows = self.__conn.execute(
             "SELECT * FROM note ORDER BY note_id"
         ).fetchall()
-
         return [self.__deserialize_note(row) for row in rows]
