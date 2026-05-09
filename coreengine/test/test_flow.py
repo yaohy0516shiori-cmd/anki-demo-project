@@ -1,7 +1,7 @@
 import pytest
 from datetime import date, timedelta
 
-from coreengine.storage.sqlite_connection import create_connection, close_connection
+from coreengine.storage.sqlite_connection import create_connection, close_connection, SqliteTransactionManager
 from coreengine.storage.schema import init_db
 
 from coreengine.storage.note_sqlite_repository import SqliteNoteRepository
@@ -34,16 +34,17 @@ def app_ctx(tmp_path):
     deck_repo = SqliteDeckRepository(conn)
     review_repo = SqliteReviewLogRepository(conn)
     session_repo = InMemoryStudySessionRepository()
+    transaction_manager = SqliteTransactionManager(conn)
 
-    card_service = CardService(card_repo, note_repo)
-    note_service = NoteService(note_repo, card_service)
-    deck_service = DeckService(deck_repo, card_service)
+    card_service = CardService(card_repo, note_repo, transaction_manager=transaction_manager)
+    note_service = NoteService(note_repo, card_service, transaction_manager=transaction_manager)
+    deck_service = DeckService(deck_repo, card_service, transaction_manager=transaction_manager)
 
     # learning_steps=1 / relearning_steps=1 是为了让测试流程更短：
     # 第一次 good: new -> learning
     # 第二次 good: learning -> review
     scheduler = Scheduler_v1(learning_steps=1, relearning_steps=1)
-    review_service = ReviewLoggerService(card_repo, review_repo, scheduler)
+    review_service = ReviewLoggerService(card_repo, review_repo, scheduler, transaction_manager=transaction_manager)
 
     study_service = StudyService(
         card_repo=card_repo,
@@ -51,6 +52,7 @@ def app_ctx(tmp_path):
         note_repo=note_repo,
         deck_repo=deck_repo,
         session_repo=session_repo,
+        transaction_manager=transaction_manager,
     )
 
     yield {
@@ -333,3 +335,43 @@ def test_hard_delete_deck_deletes_cards_and_returns_message(app_ctx):
 
     with pytest.raises(ValueError):
         app_ctx["deck_service"].get_deck(deck.deck_id)
+
+import sqlite3
+
+
+def test_create_note_rolls_back_when_card_insert_fails(app_ctx):
+    today = date(2026, 4, 22)
+
+    with pytest.raises(sqlite3.IntegrityError):
+        app_ctx["note_service"].create_note(
+            note_type=BASIC,
+            fields=["rollback-front", "rollback-back"],
+            deck_id=999,
+            today=today,
+        )
+
+    assert app_ctx["note_repo"].get_all_notes() == []
+    assert app_ctx["card_repo"].list_cards() == []
+
+def test_delete_note_preserves_review_log(app_ctx):
+    today = date(2026, 4, 22)
+
+    note_id = app_ctx["note_service"].create_note(
+        note_type=BASIC,
+        fields=["log-front", "log-back"],
+        today=today,
+    )
+
+    card = app_ctx["card_service"].get_cards_by_note_id(note_id)[0]
+
+    app_ctx["review_service"].review_card(
+        card.card_id,
+        "good",
+        today=today,
+    )
+
+    assert app_ctx["review_repo"].count_logs() == 1
+
+    app_ctx["note_service"].delete_note(note_id)
+
+    assert app_ctx["review_repo"].count_logs() == 1

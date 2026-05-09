@@ -10,24 +10,28 @@ class CardService:
         self.card_repo = card_repo
         self.note_repo = note_repo
 
-    def create_cards_from_note(self, note:Note, deck_id:int=1, today=None, auto_commit:bool=True):
+    def create_cards_from_note(self, note:Note, deck_id:int=1, today=None):
         # Decide how many cards to generate from a note and save them
         if note.note_id is None:
             raise ValueError("Note id is required")
         if not isinstance(deck_id, int) or deck_id <= 0:
             raise ValueError("Deck id must be a positive integer")
+
         create_cards = []
         default_today=today if today is not None else datetime.now(timezone.utc).date()
         now=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
         for template_ord in self.__get_template_ords(note):
-            card=Card(note_id=note.note_id, 
-            template_ord=template_ord, 
-            deck_id=deck_id,
-            status='new',
-            due=default_today,
-            created_at=now,
-            updated_at=now)
-            create_cards.append(self.card_repo.add_card(card, auto_commit=auto_commit))
+            card=Card(
+                note_id=note.note_id, 
+                template_ord=template_ord, 
+                deck_id=deck_id,
+                status='new',
+                due=default_today,
+                created_at=now,
+                updated_at=now
+            )
+            create_cards.append(self.card_repo.add_card(card))
         return create_cards
 
     def get_card(self, card_id):

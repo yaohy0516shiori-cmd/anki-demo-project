@@ -38,7 +38,6 @@ class NoteService:
         if self.is_duplicate(fields,note_type.note_type_id):
             raise ValueError("The note is duplicate")
 
-        use_transaction=self.__transaction_manager is not None
         with self.__transaction():
             note = Note(
                 note_type_id=note_type.note_type_id,
@@ -47,19 +46,11 @@ class NoteService:
                 hint=hint,
             )
 
-            saved_note_id = self.__repository_note.add_note(
-                note,
-                auto_commit=not use_transaction,
-            )
+            saved_note_id = self.__repository_note.add_note(note)
 
             saved_note = self.__repository_note.get_note(saved_note_id)
 
-            self.__card_service.create_cards_from_note(
-                saved_note,
-                deck_id=deck_id,
-                today=today,
-                auto_commit=not use_transaction,
-            )
+            self.__card_service.create_cards_from_note(saved_note,deck_id=deck_id,today=today)
 
         return saved_note_id
 
@@ -92,14 +83,13 @@ class NoteService:
         note.tags=new_tags
         note.hint=new_hint
         note.refresh()
-        use_transaction=self.__transaction_manager is not None
         with self.__transaction():
-            updated_note_id = self.__repository_note.update_note(note,auto_commit=not use_transaction)
+            updated_note_id = self.__repository_note.update_note(note)
             updated_note = self.__repository_note.get_note(updated_note_id)
 
             # it means the note is a cloze note and the fields have changed, so we need to reconcile the cards
             if old_fields!=new_fields:
-                self.__card_service.reconcile_cards_for_note(updated_note, today=today, auto_commit=not use_transaction)
+                self.__card_service.reconcile_cards_for_note(updated_note, today=today)
 
         return updated_note_id
 
@@ -108,26 +98,20 @@ class NoteService:
         if not isinstance(note_id, int) or note_id <= 0:
             raise ValueError("Note id must be a positive integer")
 
-        card_delete_result = {
-            "deleted_card_count": 0,
-            "message": f"deleted 0 cards for note {note_id}",
-        }
-
-        if self.__card_service is not None:
-            card_delete_result = self.__card_service.delete_cards_by_note_id(note_id)
-        use_transaction=self.__transaction_manager is not None
         with self.__transaction():
-            deleted_note_count = self.__repository_note.delete_note(note_id,auto_commit=not use_transaction)
+            card_delete_result = self.__card_service.delete_cards_by_note_id(note_id) if self.__card_service is not None else 0
+            deleted_note_count = self.__repository_note.delete_note(note_id)
             
+
 
         return {
             "message": (
                 f"deleted {deleted_note_count} note "
-                f"and {card_delete_result['deleted_card_count']} cards for note {note_id}"
+                f"and {card_delete_result} cards for note {note_id}"
             ),
             "note_id": note_id,
             "deleted_note_count": deleted_note_count,
-            "deleted_card_count": card_delete_result["deleted_card_count"],
+            "deleted_card_count": card_delete_result,
         }
         
     def is_duplicate(self, fields, note_type_id, exclude_note_id=None):

@@ -162,9 +162,7 @@ class SqliteCardRepository(CardRepository):
         cursor=self.__conn.execute("""
         DELETE FROM card WHERE note_id=?
         """,(note_id,))
-        if cursor.rowcount==0:
-            raise ValueError("Card not found")
-        return cursor.rowcount
+        return cursor.rowcount if cursor.rowcount is not None else 0
     
     def clear_cards(self):
         cursor=self.__conn.execute("""

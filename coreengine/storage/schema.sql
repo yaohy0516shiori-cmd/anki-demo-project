@@ -67,8 +67,8 @@ CREATE INDEX IF NOT EXISTS idx_card_status_due ON card (status, due);
 
 CREATE TABLE IF NOT EXISTS review_log (
     review_log_id INTEGER PRIMARY KEY AUTOINCREMENT, -- log_id
-    card_id INTEGER NOT NULL,
-    deck_id INTEGER NOT NULL,
+    card_id INTEGER ,
+    deck_id INTEGER ,
     rating TEXT NOT NULL CHECK(rating IN ('good', 'again')),
     old_status TEXT NOT NULL CHECK(old_status IN ('new', 'learning', 'review','relearning')),
     new_status TEXT NOT NULL CHECK(new_status IN ('new', 'learning', 'review','relearning')),
@@ -86,8 +86,8 @@ CREATE TABLE IF NOT EXISTS review_log (
     new_step_index INTEGER,
     hint_used BOOLEAN NOT NULL DEFAULT FALSE,
     review_time TEXT NOT NULL,
-    FOREIGN KEY (card_id) REFERENCES card (card_id) ON DELETE CASCADE,
-    FOREIGN KEY (deck_id) REFERENCES deck (deck_id) ON DELETE CASCADE
+    FOREIGN KEY (card_id) REFERENCES card (card_id) ON DELETE SET NULL,
+    FOREIGN KEY (deck_id) REFERENCES deck (deck_id) ON DELETE SET NULL
 );
 -- index on card_id used for search review logs by card_id
 CREATE INDEX IF NOT EXISTS idx_review_log_card_id ON review_log (card_id);

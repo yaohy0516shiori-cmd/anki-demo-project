@@ -76,7 +76,6 @@ class SqliteStudySessionRepository(SessionRepository):
             data['created_at'],
             data['updated_at']
         ))
-        self.__conn.commit()
         return self.get_session(data['session_id'])
     
     def get_session(self, session_id: str) -> Session:
@@ -107,7 +106,6 @@ class SqliteStudySessionRepository(SessionRepository):
         """,(data['deck_id'], data['today'], data['status'], data['learning_queue'], data['review_queue'], data['new_queue'], data['current_card_id'], data['current_hint_used'], data['current_back_revealed'], data['updated_at'], session.session_id))
         if cursor.rowcount==0:
             raise ValueError("Session not found")
-        self.__conn.commit()
         return self.get_session(session.session_id)
     
     def delete_session(self, session_id: str) -> None:
@@ -118,5 +116,4 @@ class SqliteStudySessionRepository(SessionRepository):
         """,(session_id,))
         if cursor.rowcount==0:
             raise ValueError("Session not found")
-        self.__conn.commit()
         return session_id

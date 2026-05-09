@@ -32,8 +32,10 @@ class ReviewLog:
         review_log_id:int | None=None,
         hint_used:bool=False,
         ):
-        if card_id<=0:
+        if card_id<=0 and card_id is not None:
             raise ValueError("Card id must be positive")
+        if deck_id<=0 and deck_id is not None:
+            raise ValueError("Deck id must be positive")
         if rating not in self.view_rating:
             raise ValueError("Invalid rating")
         now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()

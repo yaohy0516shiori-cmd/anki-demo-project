@@ -16,12 +16,26 @@ def close_connection(conn:sqlite3.Connection):
 class SqliteTransactionManager:
     def __init__(self, conn: sqlite3.Connection):
         self.__conn = conn
+        self.__commit_count = 0
 
     @contextmanager
     def transaction(self):
+        # if the commit count is greater than 0, then we are already in a transaction
+        # so we just need to increment the commit count and yield to the caller
+        if self.__commit_count > 0:
+            self.__commit_count += 1
+            try:
+                yield
+            except Exception:
+                self.__conn.rollback()
+                raise
+            finally:
+                self.__commit_count -= 1
+            return
         try:
             # start a transaction
             self.__conn.execute("BEGIN")
+            self.__commit_count = 1
             # stop, yield to the caller
             yield
         except Exception:
@@ -31,3 +45,5 @@ class SqliteTransactionManager:
         else:
             # if the transaction is successful, commit the transaction
             self.__conn.commit()
+        finally:
+            self.__commit_count = 0

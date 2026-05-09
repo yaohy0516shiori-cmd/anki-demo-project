@@ -1,5 +1,4 @@
 from datetime import datetime, timezone, date
-
 from ..card.cardmodel import Card
 from ..card.card_repository import CardRepository
 from ..note.note_repository import NoteRepository
@@ -8,6 +7,7 @@ from ..reviewlogger.service import ReviewLoggerService
 from ..render.card_render import render_card, render_hint
 from .session_repository import SessionRepository
 from .session import Session
+from contextlib import nullcontext
 
 # Study session coordinator.
 class StudyService:
@@ -20,46 +20,54 @@ class StudyService:
         review_service:ReviewLoggerService,
         note_repo:NoteRepository,
         deck_repo:DeckRepository,
-        session_repo:SessionRepository
+        session_repo:SessionRepository,
+        transaction_manager=None
         ):
         self.__card_repo=card_repo
         self.__note_repo=note_repo
         self.__review_service=review_service
         self.__deck_repo=deck_repo
         self.__session_repo=session_repo
-        
+        self.__transaction_manager=transaction_manager
+
+    def __transaction(self):
+        # used to manage the transaction
+        if self.__transaction_manager is None:
+            return nullcontext()
+        return self.__transaction_manager.transaction()
 
     # Start a study session, filter today's eligible cards, and distribute them into queues
     def start_study_session(self,deck_id:int,today:date | None=None):
         if not isinstance(deck_id, int) or deck_id <= 0:
             raise ValueError("Deck id must be a positive integer")
-        deck=self.__deck_repo.get_deck(deck_id)
-        if deck is None:
-            raise ValueError("Deck not found")
-        resolved_today=self.__resolve_today(today)
-        due_cards=self.__card_repo.get_due_cards_by_deck_id(deck_id, resolved_today) or []
-        
-        learning_cards=[]
-        review_cards=[]
-        new_cards=[]
-
-        for card in due_cards:
-            if card.status == "new":
-                new_cards.append(card)
-            elif card.status in {"learning","relearning"} :
-                learning_cards.append(card)
-            elif card.status == "review":
-                review_cards.append(card)
+        with self.__transaction():
+            deck=self.__deck_repo.get_deck(deck_id)
+            if deck is None:
+                raise ValueError("Deck not found")
+            resolved_today=self.__resolve_today(today)
+            due_cards=self.__card_repo.get_due_cards_by_deck_id(deck_id, resolved_today) or []
             
-        learning_cards.sort(key=self.__queue_sort_key)
-        review_cards.sort(key=self.__queue_sort_key)
-        new_cards.sort(key=self.__queue_sort_key)
+            learning_cards=[]
+            review_cards=[]
+            new_cards=[]
 
-        session=Session.create(deck_id, resolved_today)
-        session.learning_queue=[card.card_id for card in learning_cards]
-        session.review_queue=[card.card_id for card in review_cards]
-        session.new_queue=[card.card_id for card in new_cards]
-        session=self.__session_repo.create_session(session)
+            for card in due_cards:
+                if card.status == "new":
+                    new_cards.append(card)
+                elif card.status in {"learning","relearning"} :
+                    learning_cards.append(card)
+                elif card.status == "review":
+                    review_cards.append(card)
+                
+            learning_cards.sort(key=self.__queue_sort_key)
+            review_cards.sort(key=self.__queue_sort_key)
+            new_cards.sort(key=self.__queue_sort_key)
+
+            session=Session.create(deck_id, resolved_today)
+            session.learning_queue=[card.card_id for card in learning_cards]
+            session.review_queue=[card.card_id for card in review_cards]
+            session.new_queue=[card.card_id for card in new_cards]
+            session=self.__session_repo.create_session(session)
 
         return {
             "session_id":session.session_id,
@@ -132,27 +140,28 @@ class StudyService:
     
     # Submit rating for current card, call review service, and re-enqueue if needed
     def rate_current_card(self, session_id: str, rating: str):
-        session = self.__get_session_or_raise(session_id)
+        with self.__transaction():
+            session = self.__get_session_or_raise(session_id)
 
-        if session.current_card_id is None:
-            raise ValueError("No current card to rate")
+            if session.current_card_id is None:
+                raise ValueError("No current card to rate")
 
-        result = self.__review_service.review_card(
-            session.current_card_id,
-            rating,
-            today=session.today,
-            hint_used=session.current_hint_used,
-        )
+            result = self.__review_service.review_card(
+                session.current_card_id,
+                rating,
+                today=session.today,
+                hint_used=session.current_hint_used,
+            )
 
-        updated_card = result["card"]
+            updated_card = result["card"]
 
-        if self.__is_eligible(updated_card, session.today) and updated_card.deck_id == session.deck_id:
-            self.__enqueue_card(session, updated_card.card_id, updated_card.status)
+            if self.__is_eligible(updated_card, session.today) and updated_card.deck_id == session.deck_id:
+                self.__enqueue_card(session, updated_card.card_id, updated_card.status)
 
-        session.current_card_id = None
-        session.current_hint_used = False
-        session.current_back_revealed = False
-        self.__session_repo.update_session(session)
+            session.current_card_id = None
+            session.current_hint_used = False
+            session.current_back_revealed = False
+            self.__session_repo.update_session(session)
 
         return result
 
