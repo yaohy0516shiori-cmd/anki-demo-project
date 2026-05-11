@@ -37,15 +37,15 @@ class StudyService:
         return self.__transaction_manager.transaction()
 
     # Start a study session, filter today's eligible cards, and distribute them into queues
-    def start_study_session(self,deck_id:int,today:date | None=None):
+    def start_study_session(self,user_id:int,deck_id:int,today:date | None=None):
         if not isinstance(deck_id, int) or deck_id <= 0:
             raise ValueError("Deck id must be a positive integer")
         with self.__transaction():
-            deck=self.__deck_repo.get_deck(deck_id)
+            deck=self.__deck_repo.get_deck(user_id, deck_id)
             if deck is None:
                 raise ValueError("Deck not found")
             resolved_today=self.__resolve_today(today)
-            due_cards=self.__card_repo.get_due_cards_by_deck_id(deck_id, resolved_today) or []
+            due_cards=self.__card_repo.get_due_cards_by_deck_id(user_id, deck_id, resolved_today) or []
             
             learning_cards=[]
             review_cards=[]
@@ -63,13 +63,14 @@ class StudyService:
             review_cards.sort(key=self.__queue_sort_key)
             new_cards.sort(key=self.__queue_sort_key)
 
-            session=Session.create(deck_id, resolved_today)
+            session=Session.create(user_id, deck_id, resolved_today)
             session.learning_queue=[card.card_id for card in learning_cards]
             session.review_queue=[card.card_id for card in review_cards]
             session.new_queue=[card.card_id for card in new_cards]
-            session=self.__session_repo.create_session(session)
+            session=self.__session_repo.create_session(user_id, session)
 
         return {
+            "user_id":user_id,
             "session_id":session.session_id,
             "deck_id":deck_id,
             "deck_name":deck.deck_name,
@@ -83,8 +84,8 @@ class StudyService:
         return today if today is not None else datetime.now(timezone.utc).date()
 
     # Pop the next card from session queues and render front/back
-    def get_next_card(self, session_id: str):
-        session = self.__get_session_or_raise(session_id)
+    def get_next_card(self, user_id:int, session_id: str):
+        session = self.__get_session_or_raise(user_id, session_id)
 
         if session.current_card_id is not None:
             raise ValueError("Finish the current card before getting the next one")
@@ -96,9 +97,9 @@ class StudyService:
         session.current_card_id = card_id
         session.current_hint_used = False
         session.current_back_revealed = False
-        self.__session_repo.update_session(session)
+        self.__session_repo.update_session(user_id, session)
 
-        card = self.__card_repo.get_card(card_id)
+        card = self.__card_repo.get_card(user_id, card_id)
         note = self.__note_repo.get_note(card.note_id)
         if note is None:
             raise ValueError("Note not found")
@@ -106,6 +107,7 @@ class StudyService:
         rendered = render_card(card, note)
 
         return {
+            "user_id":user_id,
             "session_id": session.session_id,
             "card": {
                 "card_id": card.card_id,
@@ -139,9 +141,9 @@ class StudyService:
         }
     
     # Submit rating for current card, call review service, and re-enqueue if needed
-    def rate_current_card(self, session_id: str, rating: str):
+    def rate_current_card(self, user_id:int, session_id: str, rating: str):
         with self.__transaction():
-            session = self.__get_session_or_raise(session_id)
+            session = self.__get_session_or_raise(user_id, session_id)
 
             if session.current_card_id is None:
                 raise ValueError("No current card to rate")
@@ -161,12 +163,12 @@ class StudyService:
             session.current_card_id = None
             session.current_hint_used = False
             session.current_back_revealed = False
-            self.__session_repo.update_session(session)
+            self.__session_repo.update_session(user_id, session)
 
         return result
 
-    def reveal_back_of_current_card(self, session_id: str):
-        session = self.__get_session_or_raise(session_id)
+    def reveal_back_of_current_card(self, user_id:int, session_id: str):
+        session = self.__get_session_or_raise(user_id, session_id)
 
         if session.current_card_id is None:
             raise ValueError("No current card to reveal")
@@ -177,7 +179,7 @@ class StudyService:
             raise ValueError("Note not found")
 
         session.current_back_revealed = True
-        self.__session_repo.update_session(session)
+        self.__session_repo.update_session(user_id, session)
 
         return render_card(card, note)["back"]
 

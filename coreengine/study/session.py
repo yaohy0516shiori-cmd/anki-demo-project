@@ -5,6 +5,7 @@ from uuid import uuid4
 
 @dataclass
 class Session:
+    user_id: int
     today: date
     deck_id: int
     session_id: str = field(default_factory=lambda: str(uuid4()))
@@ -19,9 +20,10 @@ class Session:
     updated_at: datetime = field(default_factory=datetime.now)
 
     @staticmethod
-    def create(deck_id: int, today: date):
+    def create(user_id: int, deck_id: int, today: date):
         now=datetime.now()
         return Session(
+            user_id=user_id,
             deck_id=deck_id,
             today=today,
             created_at=now,

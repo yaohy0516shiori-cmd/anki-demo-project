@@ -9,41 +9,41 @@ class DeckRepository(ABC):
         pass
 
     @abstractmethod
-    def get_deck(self, deck_id: int) -> Deck:
+    def get_deck(self, user_id: int, deck_id: int) -> Deck:
         pass
 
     @abstractmethod
-    def update_deck(self, deck: Deck) -> Deck:
+    def update_deck(self, user_id: int, deck: Deck) -> Deck:
         pass
 
     @abstractmethod
-    def delete_deck(self, deck_id: int) -> None:
+    def delete_deck(self, user_id: int, deck_id: int) -> None:
         pass
 
     @abstractmethod
-    def get_all_decks(self) -> list[Deck]:
+    def get_all_decks(self, user_id: int) -> list[Deck]:
         pass
 
     @abstractmethod
-    def get_all_decks_ids(self) -> list[int]:
+    def get_all_decks_ids(self, user_id: int) -> list[int]:
         pass
 
     @abstractmethod
-    def get_default_deck(self) -> Deck:
+    def get_default_deck(self, user_id: int) -> Deck:
         pass
 
     @abstractmethod
-    def get_default_deck_id(self) -> int:
+    def get_default_deck_id(self, user_id: int) -> int:
         pass
 
     @abstractmethod
-    def is_default_deck(self, deck_id: int) -> bool:
+    def is_default_deck(self, user_id: int, deck_id: int) -> bool:
         pass
 
     @abstractmethod
-    def clear_decks(self) -> None:
+    def clear_decks(self, user_id: int) -> None:
         pass
 
     @abstractmethod
-    def get_deck_by_name(self, deck_name: str) -> Deck:
+    def get_deck_by_name(self, user_id: int, deck_name: str) -> Deck:
         pass

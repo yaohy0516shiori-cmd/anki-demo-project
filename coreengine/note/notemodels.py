@@ -33,6 +33,7 @@ class Note:
 
     dataclass will generate __init__ method, so we don't need to define it
     '''
+    user_id:int
     note_type_id:int
     fields:List[str]
     note_id:Optional[int]=None
@@ -48,6 +49,7 @@ class Note:
         # Validate fields, generate checksum, set timestamps after init
         self.__validation_content(self.fields, "fields")
         self.__validate_note_type_id(self.note_type_id)
+        self.__validate_user_id(self.user_id)
         if self.hint is None:
             self.hint = ""
         elif not isinstance(self.hint, str):

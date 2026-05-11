@@ -11,6 +11,7 @@ class InMemoryCardRepository(CardRepository):
         # serialize the card to a dictionary
         return {
             "card_id": card.card_id,
+            "user_id": card.user_id,
             "deck_id": card.deck_id,
             "note_id": card.note_id,
             "template_ord": card.template_ord,
@@ -28,6 +29,7 @@ class InMemoryCardRepository(CardRepository):
     def __deserialize_card(self,data:dict):
         # deserialize the card from a dictionary
         return Card(
+            user_id=data["user_id"],
             note_id=data["note_id"],
             deck_id=data["deck_id"],
             template_ord=data["template_ord"],

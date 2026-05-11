@@ -38,9 +38,9 @@ class CardService:
         # Read one card
         return self.card_repo.get_card(card_id)
 
-    def get_cards_by_note_id(self, note_id):
+    def get_cards_by_note_id(self, user_id:int, note_id:int):
         # Read all cards by note id
-        return self.card_repo.get_cards_by_note_id(note_id)
+        return self.card_repo.get_cards_by_note_id(user_id, note_id)
 
     def get_cards_by_deck_id(self, deck_id:int):
         # Read all cards by deck id
@@ -59,12 +59,12 @@ class CardService:
         # Public wrapper used by note/card synchronization flow
         return self.__get_template_ords(note)
 
-    def delete_cards_by_note_id(self, note_id:int):
+    def delete_cards_by_note_id(self, user_id:int, note_id:int):
         # delete all cards generated from a note
         if not isinstance(note_id, int) or note_id <= 0:
             raise ValueError("Note id must be a positive integer")
 
-        deleted_count = self.card_repo.delete_cards_by_note_id(note_id)
+        deleted_count = self.card_repo.delete_cards_by_note_id(user_id, note_id)
 
         return {
             "message": f"deleted {deleted_count} cards for note {note_id}",
@@ -72,11 +72,11 @@ class CardService:
             "deleted_card_count": deleted_count,
         }
     
-    def delete_cards_by_deck_id(self, deck_id: int) -> int:
+    def delete_cards_by_deck_id(self, user_id:int, note_id:int, deck_id: int) -> int:
         if not isinstance(deck_id, int) or deck_id <= 0:
             raise ValueError("Deck id must be a positive integer")
 
-        deleted_count = self.card_repo.delete_cards_by_deck_id(deck_id)
+        deleted_count = self.card_repo.delete_cards_by_deck_id(user_id, note_id, deck_id)
 
         return {
             "message": f"deleted {deleted_count} cards from deck {deck_id}",
@@ -84,14 +84,14 @@ class CardService:
             "deleted_card_count": deleted_count,
         }
         
-    def move_note_cards_to_deck(self, note_id:int, deck_id:int) -> int:
+    def move_note_cards_to_deck(self, user_id:int, note_id:int, deck_id:int) -> int:
         # Move all cards from a note to a deck
         if not isinstance(note_id, int) or note_id <= 0:
             raise ValueError("Note id must be a positive integer")
         if not isinstance(deck_id, int) or deck_id <= 0:
             raise ValueError("Deck id must be a positive integer")
 
-        moved_count = self.card_repo.move_note_cards_to_deck(note_id, deck_id)
+        moved_count = self.card_repo.move_note_cards_to_deck(user_id, note_id, deck_id)
 
         return {
             "message": f"moved {moved_count} cards from note {note_id} to deck {deck_id}",
@@ -100,14 +100,14 @@ class CardService:
             "moved_card_count": moved_count,
         }
     
-    def move_cards_to_deck(self, from_deck_id:int, to_deck_id:int) -> int:
+    def move_cards_to_deck(self, user_id:int, from_deck_id:int, to_deck_id:int) -> int:
         # Move all cards from a deck to a new deck
         if not isinstance(from_deck_id, int) or from_deck_id <= 0:
             raise ValueError("From deck id must be a positive integer")
         if not isinstance(to_deck_id, int) or to_deck_id <= 0:
             raise ValueError("To deck id must be a positive integer")
 
-        moved_count = self.card_repo.move_cards_to_deck(from_deck_id, to_deck_id)
+        moved_count = self.card_repo.move_cards_to_deck(user_id, from_deck_id, to_deck_id)
 
         return {
             "message": f"moved {moved_count} cards from deck {from_deck_id} to deck {to_deck_id}",
@@ -116,7 +116,7 @@ class CardService:
             "moved_card_count": moved_count,
         }
 
-    def reconcile_cards_for_note(self, note:Note, today=None):
+    def reconcile_cards_for_note(self, user_id:int, note:Note, today=None):
         # synchronize existing cards with current note fields
         if note.note_id is None:
             raise ValueError("Note id is required")
@@ -124,7 +124,7 @@ class CardService:
         expected_template_ords=self.__get_template_ords(note)
         expected_template_ords_set=set(expected_template_ords)
 
-        existing_cards=self.get_cards_by_note_id(note.note_id)
+        existing_cards=self.get_cards_by_note_id(user_id, note.note_id)
         existing_by_ord={card.template_ord:card for card in existing_cards}
         target_deck_id = existing_cards[0].deck_id if existing_cards else 1
 
@@ -149,7 +149,7 @@ class CardService:
             )
             self.card_repo.add_card(card)
 
-        return self.get_cards_by_note_id(note.note_id)
+        return self.get_cards_by_note_id(user_id, note.note_id)
     
 
     def __get_cloze_ords(self, text):

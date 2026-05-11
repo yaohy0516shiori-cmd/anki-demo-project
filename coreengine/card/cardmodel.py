@@ -8,6 +8,7 @@ class Card:
 
     def __init__(
         self,
+        user_id:int,
         note_id:int,
         template_ord:int,
         card_id:int | None=None,
@@ -23,6 +24,8 @@ class Card:
         deck_id:int | None=None
         ):
         # Initialize scheduling-related fields
+        if user_id <=0:
+            raise ValueError("User id must be positive")
         if note_id <=0:
             raise ValueError("Note id must be positive")
         if template_ord <0:
@@ -44,6 +47,7 @@ class Card:
         
         now=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
+        self.user_id=user_id
         self.note_id=note_id
         self.deck_id=deck_id
         self.template_ord=template_ord
@@ -84,6 +88,7 @@ class Card:
     
     def to_dict(self):
         return {
+            "user_id": self.user_id,
             "card_id": self.card_id,
             "note_id": self.note_id,
             "deck_id": self.deck_id,

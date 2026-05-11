@@ -21,13 +21,21 @@ class ReviewLogRepository(ABC):
         pass
 
     @abstractmethod
-    def get_logs_by_card_id(self, card_id: int) -> list[ReviewLog]:
+    def get_logs_by_card_id(self, user_id:int, card_id: int) -> list[ReviewLog]:
+        pass
+
+    @abstractmethod
+    def get_all_logs_by_user_id(self, user_id:int) -> list[ReviewLog]:
+        pass
+
+    @abstractmethod
+    def count_logs_by_user_id(self, user_id:int) -> int:
         pass
 
     @abstractmethod
     def get_all_logs(self) -> list[ReviewLog]:
         pass
-
+    
     @abstractmethod
     def count_logs(self) -> int:
         pass

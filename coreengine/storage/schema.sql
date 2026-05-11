@@ -1,33 +1,36 @@
-CREATE TABLE IF NOT EXISTS deck (
-    deck_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    deck_name TEXT NOT NULL,
-    deck_description TEXT NOT NULL DEFAULT '',
+CREATE TABLE IF NOT EXISTS user (
+    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    username TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
--- index on deck_name used for search decks by deck_name
-CREATE INDEX IF NOT EXISTS idx_deck_name ON deck(deck_name);
--- index on created_at used for search decks by created_at
-CREATE INDEX IF NOT EXISTS idx_deck_created_at ON deck (created_at);
--- index on updated_at used for search decks by updated_at
-CREATE INDEX IF NOT EXISTS idx_deck_updated_at ON deck (updated_at);
+-- index on email used for search users by email
+CREATE INDEX IF NOT EXISTS idx_user_email ON user(email);
+-- index on username used for search users by username
+CREATE TABLE IF NOT EXISTS deck (
+    deck_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    deck_name TEXT NOT NULL,
+    deck_description TEXT NOT NULL DEFAULT '',
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
 
-INSERT OR IGNORE INTO deck (
-    deck_id,
-    deck_name,
-    deck_description,
-    created_at,
-    updated_at
-) VALUES (
-    1,
-    'Default',
-    'System default deck',
-    CURRENT_TIMESTAMP,
-    CURRENT_TIMESTAMP
+    FOREIGN KEY (user_id) REFERENCES user (user_id) ON DELETE CASCADE,
+    UNIQUE(user_id, deck_name)
 );
+-- index on deck_name used for search decks by deck_name
+CREATE INDEX IF NOT EXISTS idx_deck_id ON deck(deck_id);
+-- index on user_id used for search decks by user_id
+CREATE INDEX IF NOT EXISTS idx_deck_user_id ON deck (user_id);
+-- index on is_default used for search decks by is_default
+CREATE INDEX IF NOT EXISTS idx_deck_DEFAULT ON deck (is_default);
 
 CREATE TABLE IF NOT EXISTS note (
     note_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
     note_type_id INTEGER NOT NULL,
     fields_JSON TEXT NOT NULL,
     tags_JSON TEXT NOT NULL,
@@ -35,13 +38,17 @@ CREATE TABLE IF NOT EXISTS note (
     checksum TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    hint TEXT NOT NULL DEFAULT ''
+    hint TEXT NOT NULL DEFAULT '',
+
+    FOREIGN KEY (user_id) REFERENCES user (user_id) ON DELETE CASCADE,
+    UNIQUE(user_id, note_type_id, checksum)
 );
 -- used for search note by note_type_id and checksum, which is unique for each note
-CREATE INDEX IF NOT EXISTS idx_note_note_type_id ON note (note_type_id,checksum);
+CREATE INDEX IF NOT EXISTS idx_note_user_checksum ON note (user_id,note_type_id,checksum);
 
 CREATE TABLE IF NOT EXISTS card (
     card_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
     note_id INTEGER NOT NULL,
     deck_id INTEGER NOT NULL DEFAULT 1,
     template_ord INTEGER NOT NULL,
@@ -56,7 +63,9 @@ CREATE TABLE IF NOT EXISTS card (
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(note_id,template_ord),
     FOREIGN KEY (note_id) REFERENCES note (note_id) ON DELETE CASCADE,
-    FOREIGN KEY (deck_id) REFERENCES deck (deck_id) ON DELETE RESTRICT
+    FOREIGN KEY (deck_id) REFERENCES deck (deck_id) ,
+    FOREIGN KEY (user_id) REFERENCES user (user_id) ON DELETE CASCADE,
+    UNIQUE(user_id, note_id, template_ord)
 );
 -- index on note_id used for search cards by note_id
 CREATE INDEX IF NOT EXISTS idx_card_note_id ON card (note_id);
@@ -64,9 +73,12 @@ CREATE INDEX IF NOT EXISTS idx_card_note_id ON card (note_id);
 CREATE INDEX IF NOT EXISTS idx_card_deck_id ON card (deck_id);
 -- index on status and due used for scheduling, which due<=today and with status
 CREATE INDEX IF NOT EXISTS idx_card_status_due ON card (status, due);
+CREATE INDEX IF NOT EXISTS idx_card_user_deck_due ON card(user_id, deck_id, due);
+CREATE INDEX IF NOT EXISTS idx_card_user_note ON card(user_id, note_id);
 
 CREATE TABLE IF NOT EXISTS review_log (
-    review_log_id INTEGER PRIMARY KEY AUTOINCREMENT, -- log_id
+    review_log_id INTEGER PRIMARY KEY AUTOINCREMENT,-- log_id
+    user_id INTEGER NOT NULL, 
     card_id INTEGER ,
     deck_id INTEGER ,
     rating TEXT NOT NULL CHECK(rating IN ('good', 'again')),
@@ -86,8 +98,11 @@ CREATE TABLE IF NOT EXISTS review_log (
     new_step_index INTEGER,
     hint_used BOOLEAN NOT NULL DEFAULT FALSE,
     review_time TEXT NOT NULL,
+
     FOREIGN KEY (card_id) REFERENCES card (card_id) ON DELETE SET NULL,
-    FOREIGN KEY (deck_id) REFERENCES deck (deck_id) ON DELETE SET NULL
+    FOREIGN KEY (deck_id) REFERENCES deck (deck_id) ON DELETE SET NULL,
+    FOREIGN KEY (user_id) REFERENCES user (user_id) ON DELETE CASCADE,
+    FOREIGN KEY (note_id) REFERENCES note (note_id) ON DELETE SET NULL,
 );
 -- index on card_id used for search review logs by card_id
 CREATE INDEX IF NOT EXISTS idx_review_log_card_id ON review_log (card_id);
@@ -97,9 +112,11 @@ CREATE INDEX IF NOT EXISTS idx_review_log_deck_id ON review_log (deck_id);
 CREATE INDEX IF NOT EXISTS idx_review_log_card_time ON review_log (card_id,review_time);
 -- index on deck_id and review_time used for search review logs by deck_id and review_time
 CREATE INDEX IF NOT EXISTS idx_review_log_deck_time ON review_log (deck_id,review_time);
+CREATE INDEX IF NOT EXISTS idx_review_log_user_time ON review_log(user_id, review_time);
 
 CREATE TABLE IF NOT EXISTS study_session (
     session_id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
     deck_id INTEGER NOT NULL,
     today TEXT NOT NULL,
     status TEXT NOT NULL,
@@ -115,9 +132,12 @@ CREATE TABLE IF NOT EXISTS study_session (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
 
-    FOREIGN KEY(deck_id) REFERENCES deck(deck_id)
+    FOREIGN KEY(deck_id) REFERENCES deck(deck_id),
+    FOREIGN KEY(user_id) REFERENCES user(user_id) ON DELETE CASCADE,
+    FOREIGN KEY(current_card_id) REFERENCES card(card_id) ON DELETE SET NULL,
 );
 -- index on deck_id used for search study sessions by deck_id
 CREATE INDEX IF NOT EXISTS idx_study_session_deck_id ON study_session (deck_id);
 -- index on today used for search study sessions by today
 CREATE INDEX IF NOT EXISTS idx_study_session_today ON study_session (today);
+CREATE INDEX IF NOT EXISTS idx_study_session_user_id ON study_session(user_id);

@@ -18,29 +18,29 @@ class DeckService:
         with self.__transaction():
             return self.__repository_deck.create_deck(deck)
     
-    def get_deck(self, deck_id:int):
-        return self.__repository_deck.get_deck(deck_id)
+    def get_deck(self, user_id:int, deck_id:int):
+        return self.__repository_deck.get_deck(user_id, deck_id)
     
-    def update_deck(self, deck:Deck):
+    def update_deck(self, user_id:int, deck:Deck):
         with self.__transaction():
-            return self.__repository_deck.update_deck(deck)
+            return self.__repository_deck.update_deck(user_id, deck)
 
-    def delete_deck(self, deck_id:int):
+    def delete_deck(self, user_id:int, deck_id:int):
         # Safe delete: preserve cards by moving them to default deck
         with self.__transaction():
-            deck = self.__repository_deck.get_deck(deck_id)
+            deck = self.__repository_deck.get_deck(user_id, deck_id)
 
-            if self.__repository_deck.is_default_deck(deck_id):
+            if self.__repository_deck.is_default_deck(user_id, deck_id):
                 raise ValueError("Default deck cannot be deleted")
 
-            default_deck = self.__repository_deck.get_default_deck()
+            default_deck = self.__repository_deck.get_default_deck(user_id)
 
             move_result = self.__card_service.move_cards_to_deck(
                 deck.deck_id,
                 default_deck.deck_id,
             )
 
-            deleted_deck_count = self.__repository_deck.delete_deck(deck_id)
+            deleted_deck_count = self.__repository_deck.delete_deck(user_id, deck_id)
 
         return {
             "message": (
@@ -54,19 +54,19 @@ class DeckService:
             "target_deck_id": default_deck.deck_id,
         }
     
-    def delete_deck_and_cards(self, deck_id:int):
+    def delete_deck_and_cards(self, user_id:int, deck_id:int):
         # Hard delete: delete deck and all its cards
         if not isinstance(deck_id, int) or deck_id <= 0:
             raise ValueError("Deck ID must be a positive integer")
 
-        if self.__repository_deck.is_default_deck(deck_id):
+        if self.__repository_deck.is_default_deck(user_id, deck_id):
             raise ValueError("Default deck cannot be deleted")
 
         with self.__transaction():
-            deck = self.__repository_deck.get_deck(deck_id)
+            deck = self.__repository_deck.get_deck(user_id, deck_id)
 
-            card_delete_result = self.__card_service.delete_cards_by_deck_id(deck_id)
-            deleted_deck_count = self.__repository_deck.delete_deck(deck_id)
+            card_delete_result = self.__card_service.delete_cards_by_deck_id(user_id, deck_id)
+            deleted_deck_count = self.__repository_deck.delete_deck(user_id, deck_id)
 
         return {
             "message": (
@@ -79,23 +79,23 @@ class DeckService:
             "deleted_card_count": card_delete_result["deleted_card_count"],
         }
         
-    def get_all_decks(self):
-        return self.__repository_deck.get_all_decks()
+    def get_all_decks(self, user_id:int):
+        return self.__repository_deck.get_all_decks(user_id)
     
-    def get_all_decks_ids(self):
-        return self.__repository_deck.get_all_decks_ids()
+    def get_all_decks_ids(self, user_id:int):
+        return self.__repository_deck.get_all_decks_ids(user_id)
     
-    def get_cards_by_deck_id(self, deck_id:int):
-        return self.__card_service.get_cards_by_deck_id(deck_id)
+    def get_cards_by_deck_id(self, user_id:int, deck_id:int):
+        return self.__card_service.get_cards_by_deck_id(user_id, deck_id)
     
-    def move_cards_to_deck(self, from_deck_id:int, to_deck_id:int):
+    def move_cards_to_deck(self, user_id:int, from_deck_id:int, to_deck_id:int):
         with self.__transaction():
-            return self.__card_service.move_cards_to_deck(from_deck_id, to_deck_id)
+            return self.__card_service.move_cards_to_deck(user_id, from_deck_id, to_deck_id)
     
-    def move_note_cards_to_deck(self, note_id:int, deck_id:int):
+    def move_note_cards_to_deck(self, user_id:int, note_id:int, deck_id:int):
         with self.__transaction():
-            return self.__card_service.move_note_cards_to_deck(note_id, deck_id)
-    
-    def get_due_cards_by_deck_id(self, deck_id:int, today:date):
-        return self.__card_service.get_due_cards_by_deck_id(deck_id, today)
+            return self.__card_service.move_note_cards_to_deck(user_id, note_id, deck_id)
+
+    def get_due_cards_by_deck_id(self, user_id:int, deck_id:int, today:date):
+        return self.__card_service.get_due_cards_by_deck_id(user_id, deck_id, today)
     

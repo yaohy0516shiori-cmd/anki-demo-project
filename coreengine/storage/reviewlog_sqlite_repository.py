@@ -10,6 +10,7 @@ class SqliteReviewLogRepository(ReviewLogRepository):
             return value.isoformat() if hasattr(value, "isoformat") else value
         return {
             'card_id':review_log.card_id,
+            'user_id':review_log.user_id,
             'deck_id':review_log.deck_id,
             'rating':review_log.rating,
             'old_status':review_log.old_status,
@@ -34,6 +35,7 @@ class SqliteReviewLogRepository(ReviewLogRepository):
         return ReviewLog(
             review_log_id=row['review_log_id'],
             card_id=row['card_id'],
+            user_id=row['user_id'],
             deck_id=row['deck_id'],
             rating=row['rating'],
             old_status=row['old_status'],
@@ -54,13 +56,16 @@ class SqliteReviewLogRepository(ReviewLogRepository):
             review_time=row['review_time'],
         )
     
-    def add_log(self,review_log:ReviewLog):
+    def add_log(self, user_id:int, review_log:ReviewLog):
         if review_log.review_log_id is not None:
             raise ValueError("Review log ID must be None")
+        if not isinstance(user_id,int):
+            raise ValueError("User ID must be an integer")
         data=self.__serialize_log(review_log)
         cursor=self.__conn.execute(
             """
             INSERT INTO review_log (
+            user_id,
             card_id,
             deck_id,
             rating,
@@ -82,7 +87,8 @@ class SqliteReviewLogRepository(ReviewLogRepository):
             review_time
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (data['card_id'], 
+            (user_id,
+            data['card_id'], 
             data['deck_id'],
             data['rating'], 
             data['old_status'], 
@@ -103,19 +109,28 @@ class SqliteReviewLogRepository(ReviewLogRepository):
             data['review_time'])
             )
         log_id=cursor.lastrowid
-        return self.get_log(log_id)
+        return self.get_log(user_id, log_id)
     
-    def get_log(self,review_log_id:int)->ReviewLog:
-        row=self.__conn.execute("SELECT * FROM review_log WHERE review_log_id=?", (review_log_id,)).fetchone()
+    def get_log(self, user_id:int, review_log_id:int)->ReviewLog:
+        if not isinstance(user_id,int):
+            raise ValueError("User ID must be an integer")
+        if not isinstance(review_log_id,int):
+            raise ValueError("Review log ID must be an integer")
+        row=self.__conn.execute("SELECT * FROM review_log WHERE review_log_id=? AND user_id=?", (review_log_id,user_id)).fetchone()
         if row:
             return self.__deserialize_log(row)
         else:
             raise ValueError("Review log not found")
     
-    def update_log(self,review_log:ReviewLog):
+    def update_log(self, user_id:int, review_log:ReviewLog):
+        if not isinstance(user_id,int):
+            raise ValueError("User ID must be an integer")
+        if not isinstance(review_log.review_log_id,int):
+            raise ValueError("Review log ID must be an integer")
         data=self.__serialize_log(review_log)
         self.__conn.execute("""
-        UPDATE review_log SET card_id=?,
+        UPDATE review_log SET user_id=?,
+        card_id=?,
         deck_id=?,
         rating=?,
         old_status=?,
@@ -135,7 +150,8 @@ class SqliteReviewLogRepository(ReviewLogRepository):
         hint_used=?,
         review_time=? 
         WHERE review_log_id=?""", 
-        (data['card_id'], 
+        (user_id,
+        data['card_id'], 
         data['deck_id'],
         data['rating'], 
         data['old_status'], 
@@ -156,12 +172,32 @@ class SqliteReviewLogRepository(ReviewLogRepository):
         data['review_time'],
         review_log.review_log_id))
     
-    def delete_log(self,review_log_id:int):
+    def delete_log(self, user_id:int, review_log_id:int):
+        if not isinstance(user_id,int):
+            raise ValueError("User ID must be an integer")
+        if not isinstance(review_log_id,int):
+            raise ValueError("Review log ID must be an integer")
         raise NotImplementedError("V1 does not support deleting review logs")
 
-    def get_logs_by_card_id(self,card_id:int)->list[ReviewLog]:
+    def get_logs_by_card_id(self, user_id:int, card_id:int)->list[ReviewLog]:
+        if not isinstance(user_id,int):
+            raise ValueError("User ID must be an integer")
+        if not isinstance(card_id,int):
+            raise ValueError("Card ID must be an integer")
         rows=self.__conn.execute("SELECT * FROM review_log WHERE card_id=?", (card_id,)).fetchall()
         return [self.__deserialize_log(row) for row in rows]
+    
+    def get_all_logs_by_user_id(self, user_id:int)->list[ReviewLog]:
+        if not isinstance(user_id,int):
+            raise ValueError("User ID must be an integer")
+        rows=self.__conn.execute("SELECT * FROM review_log WHERE user_id=?", (user_id,)).fetchall()
+        return [self.__deserialize_log(row) for row in rows]
+    
+    def count_logs_by_user_id(self, user_id:int)->int:
+        if not isinstance(user_id,int):
+            raise ValueError("User ID must be an integer")
+        row=self.__conn.execute("SELECT COUNT(*) FROM review_log WHERE user_id=?", (user_id,)).fetchone()
+        return row[0]
     
     def get_all_logs(self)->list[ReviewLog]:
         rows=self.__conn.execute("SELECT * FROM review_log").fetchall()

@@ -12,6 +12,7 @@ class InMemoryReviewLogRepository(ReviewLogRepository):
     def __seralize_log(self, log: ReviewLog) -> dict:
         return {
             "review_log_id": log.review_log_id,
+            "user_id": log.user_id,
             "card_id": log.card_id,
             "deck_id": log.deck_id,
             "rating": log.rating,
@@ -37,6 +38,7 @@ class InMemoryReviewLogRepository(ReviewLogRepository):
     def __deserialize_log(self, data: dict) -> ReviewLog:
         return ReviewLog(
             review_log_id=data["review_log_id"],
+            user_id=data["user_id"],
             card_id=data["card_id"],
             deck_id=data["deck_id"],
             rating=data["rating"],
@@ -59,47 +61,59 @@ class InMemoryReviewLogRepository(ReviewLogRepository):
         )
     
     # Add a review log
-    def add_log(self, log: ReviewLog):
+    def add_log(self, user_id:int, log: ReviewLog):
         if log.review_log_id is not None:
             raise ValueError("New Log ID must be None")
-        log.review_log_id=self.__next_id  # 都不允许输入了为什么不直接在reviewlog里定死log_id=None? 其余同理 比如note_id
-        self.__next_id+=1
-        self.__logs[log.review_log_id]=self.__seralize_log(log)
-
-        return self.__deserialize_log(self.__logs[log.review_log_id])
+        if user_id not in self.__logs:
+            self.__logs[user_id]={}
+            log.review_log_id=1
+        elif self.__logs[user_id][log.review_log_id] is not None:
+            log.review_log_id+=1
+        self.__next_id=log.review_log_id+1
+        self.__logs[user_id][log.review_log_id]=self.__seralize_log(log)
+        return self.__deserialize_log(self.__logs[user_id][log.review_log_id])
 
     # Get a review log by id
-    def get_log(self, review_log_id: int) -> ReviewLog:
-        data=self.__logs.get(review_log_id)
+    def get_log(self, user_id:int, review_log_id: int) -> ReviewLog:
+        data=self.__logs.get(user_id, {}).get(review_log_id)
         if not data:
             raise ValueError("Log not found")
         return self.__deserialize_log(data)
     
     # Update a review log
-    def update_log(self, log: ReviewLog):
+    def update_log(self, user_id:int, log: ReviewLog):
         if log.review_log_id is None:
             raise ValueError("Log ID must be set")
-        self.__logs[log.review_log_id]=self.__seralize_log(log)
-        return self.__deserialize_log(self.__logs[log.review_log_id])
+        self.__logs[user_id][log.review_log_id]=self.__seralize_log(log)
+        return self.__deserialize_log(self.__logs[user_id][log.review_log_id])
     
     # Delete a review log
-    def delete_log(self, review_log_id: int):
+    def delete_log(self, user_id:int, review_log_id: int):
         raise NotImplementedError("V1 does not support deleting review logs")
 
     # Get all review logs by card id
-    def get_logs_by_card_id(self, card_id: int) -> List[ReviewLog]:
+    def get_logs_by_card_id(self, user_id:int, card_id: int) -> List[ReviewLog]:
         result=[]
-        for data in self.__logs.values():
+        for data in self.__logs[user_id].values():
             if data["card_id"]==card_id:
                 result.append(self.__deserialize_log(data))
         return result
     
     # Get all review logs
-    def get_all_logs(self) -> List[ReviewLog]:
-        return [self.__deserialize_log(data) for data in self.__logs.values()]
+    def get_all_logs_by_user_id(self, user_id:int) -> List[ReviewLog]:
+        return [self.__deserialize_log(data) for data in self.__logs[user_id].values()]
 
+    # Count the number of review logs
+    def count_logs_by_user_id(self, user_id:int) -> int:
+        return len(self.__logs[user_id])
+    
+    # Get all review logs
+    def get_all_logs(self) -> List[ReviewLog]:
+        result=[]
+        for user_id in self.__logs.keys():
+            result.extend(self.get_all_logs_by_user_id(user_id))
+        return result
+    
     # Count the number of review logs
     def count_logs(self) -> int:
         return len(self.__logs)
-    
-    

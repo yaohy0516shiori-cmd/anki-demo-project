@@ -26,46 +26,49 @@ class NoteService:
             return nullcontext()
         return self.__transaction_manager.transaction()
 
-    def create_note(self, note_type, fields, tags=None, hint=None, deck_id=1, today=None):
+    def create_note(self, user_id:int, note_type, fields, tags=None, hint=None, deck_id=1, today=None):
         # create a note: validate, deduplicate, construct Note, save to repo
         # deck_id is 0 by default, if deck_id is not set, the note will be created in the default deck
         hint=hint if hint is not None else ''
         tags=tags if tags is not None else []
+        if not isinstance(user_id, int) or user_id <= 0:
+            raise ValueError("User id must be a positive integer")
         if not isinstance(deck_id, int) or deck_id <= 0:
             raise ValueError("Deck id must be a positive integer")
 
-        self.__validate_fields(note_type, fields)
-        if self.is_duplicate(fields,note_type.note_type_id):
+        self.__validate_fields(user_id, note_type, fields)
+        if self.is_duplicate(user_id, fields,note_type.note_type_id):
             raise ValueError("The note is duplicate")
 
         with self.__transaction():
             note = Note(
+                user_id=user_id,
                 note_type_id=note_type.note_type_id,
                 fields=fields,
                 tags=tags,
                 hint=hint,
             )
 
-            saved_note_id = self.__repository_note.add_note(note)
+            saved_note_id = self.__repository_note.add_note(user_id, note)
 
-            saved_note = self.__repository_note.get_note(saved_note_id)
+            saved_note = self.__repository_note.get_note(user_id, saved_note_id)
 
             self.__card_service.create_cards_from_note(saved_note,deck_id=deck_id,today=today)
 
         return saved_note_id
 
 
-    def get_note(self, note_id):
+    def get_note(self, user_id:int, note_id:int):
         # get a note from the repository by id
-        return self.__repository_note.get_note(note_id)
+        return self.__repository_note.get_note(user_id, note_id)
 
-    def list_notes(self):
+    def list_notes(self, user_id:int):
         # get all notes from the repository
-        return self.__repository_note.get_all_notes()
+        return self.__repository_note.get_all_notes(user_id)
 
-    def update_note(self, note_id, fields=None, tags=None,hint=None, today=None):
+    def update_note(self, user_id:int, note_id:int, fields=None, tags=None,hint=None, today=None):
         # update a note in the repository, fields/tags, refresh, then save to repo
-        note = self.__repository_note.get_note(note_id)
+        note = self.__repository_note.get_note(user_id, note_id)
         note_type=get_note_type(note.note_type_id)
         new_fields=note.fields if fields is None else fields
         new_tags=note.tags if tags is None else tags
@@ -75,8 +78,8 @@ class NoteService:
         elif not isinstance(new_hint, str):
             raise ValueError("Hint must be a string")
 
-        self.__validate_fields(note_type, new_fields)
-        if self.is_duplicate(new_fields,note.note_type_id,note_id):
+        self.__validate_fields(user_id, note_type, new_fields)
+        if self.is_duplicate(user_id, new_fields,note.note_type_id,note_id):
             raise ValueError("The note is duplicate")
         old_fields=note.fields
         note.fields=new_fields
@@ -84,8 +87,8 @@ class NoteService:
         note.hint=new_hint
         note.refresh()
         with self.__transaction():
-            updated_note_id = self.__repository_note.update_note(note)
-            updated_note = self.__repository_note.get_note(updated_note_id)
+            updated_note_id = self.__repository_note.update_note(user_id, note)
+            updated_note = self.__repository_note.get_note(user_id, updated_note_id)
 
             # it means the note is a cloze note and the fields have changed, so we need to reconcile the cards
             if old_fields!=new_fields:
@@ -93,14 +96,14 @@ class NoteService:
 
         return updated_note_id
 
-    def delete_note(self, note_id):
+    def delete_note(self, user_id:int, note_id:int):
         # delete a note from the repository
         if not isinstance(note_id, int) or note_id <= 0:
             raise ValueError("Note id must be a positive integer")
 
         with self.__transaction():
-            card_delete_result = self.__card_service.delete_cards_by_note_id(note_id) if self.__card_service is not None else 0
-            deleted_note_count = self.__repository_note.delete_note(note_id)
+            card_delete_result = self.__card_service.delete_cards_by_note_id(user_id, note_id) if self.__card_service is not None else 0
+            deleted_note_count = self.__repository_note.delete_note(user_id, note_id)
             
 
 
@@ -114,10 +117,10 @@ class NoteService:
             "deleted_card_count": card_delete_result,
         }
         
-    def is_duplicate(self, fields, note_type_id, exclude_note_id=None):
+    def is_duplicate(self, user_id:int, fields, note_type_id, exclude_note_id=None):
         # check if the note is duplicate
         tempchecksum=calculate_checksum(fields)
-        notes=self.__repository_note.get_all_notes()
+        notes=self.__repository_note.get_all_notes(user_id)
         for note in notes:
             if note.note_id==exclude_note_id and exclude_note_id is not None:
                 continue
@@ -125,7 +128,7 @@ class NoteService:
                 return True
         return False
 
-    def __validate_fields(self, note_type:NoteType, fields):
+    def __validate_fields(self, user_id:int, note_type:NoteType, fields):
         # validate the fields of the note
         if len(fields) != len(note_type.field_names):   
             raise ValueError("The number of fields is not equal to the number of field names")
