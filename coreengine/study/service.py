@@ -100,7 +100,7 @@ class StudyService:
         self.__session_repo.update_session(user_id, session)
 
         card = self.__card_repo.get_card(user_id, card_id)
-        note = self.__note_repo.get_note(card.note_id)
+        note = self.__note_repo.get_note(user_id, card.note_id)
         if note is None:
             raise ValueError("Note not found")
 
@@ -149,6 +149,7 @@ class StudyService:
                 raise ValueError("No current card to rate")
 
             result = self.__review_service.review_card(
+                user_id,
                 session.current_card_id,
                 rating,
                 today=session.today,
@@ -173,8 +174,8 @@ class StudyService:
         if session.current_card_id is None:
             raise ValueError("No current card to reveal")
 
-        card = self.__card_repo.get_card(session.current_card_id)
-        note = self.__note_repo.get_note(card.note_id)
+        card = self.__card_repo.get_card(user_id, session.current_card_id)
+        note = self.__note_repo.get_note(user_id, card.note_id)
         if note is None:
             raise ValueError("Note not found")
 
@@ -183,29 +184,29 @@ class StudyService:
 
         return render_card(card, note)["back"]
 
-    def reveal_hint_of_current_card(self, session_id: str):
-        session = self.__get_session_or_raise(session_id)
+    def reveal_hint_of_current_card(self, user_id:int, session_id: str):
+        session = self.__get_session_or_raise(user_id, session_id)
 
         if session.current_card_id is None:
             raise ValueError("No current card to reveal")
         if session.current_back_revealed:
             raise ValueError("Back of the current card has already been revealed")
 
-        card = self.__card_repo.get_card(session.current_card_id)
-        note = self.__note_repo.get_note(card.note_id)
+        card = self.__card_repo.get_card(user_id, session.current_card_id)
+        note = self.__note_repo.get_note(user_id, card.note_id)
         if note is None:
             raise ValueError("Note not found")
 
         hint_text = render_hint(note)
         if hint_text:
             session.current_hint_used = True
-            self.__session_repo.update_session(session)
+            self.__session_repo.update_session(user_id, session)
             return hint_text
         return ""
 
     # Check if the study session is finished
-    def is_finished(self, session_id: str) -> bool:
-        session = self.__get_session_or_raise(session_id)
+    def is_finished(self, user_id:int, session_id: str) -> bool:
+        session = self.__get_session_or_raise(user_id, session_id)
         return (
             len(session.learning_queue) == 0
             and len(session.review_queue) == 0
@@ -240,8 +241,8 @@ class StudyService:
     def __queue_sort_key(self,card:Card):
         return (card.due,card.note_id,card.template_ord)
         
-    def __get_session_or_raise(self, session_id: str):
-        session = self.__session_repo.get_session(session_id)
+    def __get_session_or_raise(self, user_id:int, session_id: str):
+        session = self.__session_repo.get_session(user_id, session_id)
         if session is None:
             raise ValueError("Session not found")
         return session

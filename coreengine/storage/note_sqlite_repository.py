@@ -55,7 +55,7 @@ class SqliteNoteRepository(NoteRepository):
             updated_at,
             hint
         ) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             user_id,
@@ -99,7 +99,7 @@ class SqliteNoteRepository(NoteRepository):
             checksum=?,
             updated_at=?,
             hint=?
-            WHERE note_id=?
+            WHERE note_id=? AND user_id=?
         """,(
             user_id,
             data['note_type_id'],
@@ -138,9 +138,8 @@ class SqliteNoteRepository(NoteRepository):
         if not isinstance(user_id,int):
             raise ValueError("User ID must be an integer")
         rows = self.__conn.execute(
-            "SELECT * FROM note WHERE user_id = ? ORDER BY note_id"
-            (user_id,),
-        ).fetchall()
+            "SELECT * FROM note WHERE user_id = ? ORDER BY note_id",
+            (user_id,),).fetchall()
         return [self.__deserialize_note(row) for row in rows]
     
     def count_notes(self, user_id:int):

@@ -9,6 +9,7 @@ class Deck:
         deck_description:str | None=None, 
         created_at:str | None=None, 
         updated_at:str | None=None,
+        is_default:bool=False,
         ):
         if deck_id is not None:
             if not isinstance(deck_id, int) or deck_id < 0:
@@ -20,7 +21,7 @@ class Deck:
         self.deck_description=str(deck_description).strip() if deck_description is not None else ""
         self.created_at = created_at.strip() if isinstance(created_at, str) and created_at.strip() else now
         self.updated_at = updated_at.strip() if isinstance(updated_at, str) and updated_at.strip() else now
-        self.is_default=False
+        self.is_default=bool(is_default)
 
     def to_dict(self):
         return {
@@ -28,6 +29,7 @@ class Deck:
             "deck_id": self.deck_id,
             "deck_name": self.deck_name,
             "deck_description": self.deck_description,
+            "is_default": self.is_default,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
@@ -39,6 +41,7 @@ class Deck:
             deck_id=data["deck_id"], 
             deck_name=data["deck_name"], 
             deck_description=data["deck_description"], 
+            is_default=data["is_default"],
             created_at=data["created_at"], 
             updated_at=data["updated_at"],
             )

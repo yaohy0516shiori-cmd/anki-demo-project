@@ -53,7 +53,7 @@ class NoteService:
 
             saved_note = self.__repository_note.get_note(user_id, saved_note_id)
 
-            self.__card_service.create_cards_from_note(saved_note,deck_id=deck_id,today=today)
+            self.__card_service.create_cards_from_note(user_id, saved_note,deck_id=deck_id,today=today)
 
         return saved_note_id
 
@@ -92,7 +92,7 @@ class NoteService:
 
             # it means the note is a cloze note and the fields have changed, so we need to reconcile the cards
             if old_fields!=new_fields:
-                self.__card_service.reconcile_cards_for_note(updated_note, today=today)
+                self.__card_service.reconcile_cards_for_note(user_id, updated_note, today=today)
 
         return updated_note_id
 
@@ -102,6 +102,7 @@ class NoteService:
             raise ValueError("Note id must be a positive integer")
 
         with self.__transaction():
+            card_before=self.__card_service.get_cards_by_note_id(user_id, note_id)
             card_delete_result = self.__card_service.delete_cards_by_note_id(user_id, note_id) if self.__card_service is not None else 0
             deleted_note_count = self.__repository_note.delete_note(user_id, note_id)
             

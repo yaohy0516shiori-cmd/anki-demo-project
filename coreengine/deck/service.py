@@ -36,6 +36,7 @@ class DeckService:
             default_deck = self.__repository_deck.get_default_deck(user_id)
 
             move_result = self.__card_service.move_cards_to_deck(
+                user_id,
                 deck.deck_id,
                 default_deck.deck_id,
             )
@@ -64,7 +65,6 @@ class DeckService:
 
         with self.__transaction():
             deck = self.__repository_deck.get_deck(user_id, deck_id)
-
             card_delete_result = self.__card_service.delete_cards_by_deck_id(user_id, deck_id)
             deleted_deck_count = self.__repository_deck.delete_deck(user_id, deck_id)
 

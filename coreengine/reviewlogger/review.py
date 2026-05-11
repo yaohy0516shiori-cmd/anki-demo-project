@@ -12,6 +12,7 @@ class ReviewLog:
     def __init__(
         self,
         user_id:int,
+        note_id:int,
         card_id:int,
         deck_id:int,
         rating:str,
@@ -35,9 +36,9 @@ class ReviewLog:
         ):
         if user_id<=0:
             raise ValueError("User id must be positive")
-        if card_id<=0 and card_id is not None:
+        if card_id is not None and card_id<=0:
             raise ValueError("Card id must be positive")
-        if deck_id<=0 and deck_id is not None:
+        if deck_id is not None and deck_id<=0:
             raise ValueError("Deck id must be positive")
         if rating not in self.view_rating:
             raise ValueError("Invalid rating")
@@ -46,6 +47,7 @@ class ReviewLog:
         self.user_id=user_id
         self.card_id=card_id
         self.deck_id=deck_id
+        self.note_id=note_id
         self.rating=rating
         self.old_status=old_status
         self.new_status=new_status

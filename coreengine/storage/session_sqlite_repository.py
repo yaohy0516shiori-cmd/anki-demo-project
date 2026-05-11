@@ -11,6 +11,7 @@ class SqliteStudySessionRepository(SessionRepository):
     def __serialize_session(self, session: Session) -> dict:
         return {
             "session_id": session.session_id,
+            "user_id": session.user_id,
             "deck_id": session.deck_id,
             "today": session.today.isoformat() if isinstance(session.today, date) else session.today,
             "status": session.status,
@@ -31,6 +32,7 @@ class SqliteStudySessionRepository(SessionRepository):
     def __deserialize_session(self, row: sqlite3.Row) -> Session:
         return Session(
             session_id=row["session_id"],
+            user_id=row["user_id"],
             deck_id=row["deck_id"],
             today=date.fromisoformat(row["today"]),
             status=row["status"],
@@ -44,10 +46,11 @@ class SqliteStudySessionRepository(SessionRepository):
             updated_at=datetime.fromisoformat(row["updated_at"]),
         )
 
-    def create_session(self, session: Session) -> Session:
+    def create_session(self, user_id:int, session: Session) -> Session:
         data=self.__serialize_session(session)
         cursor=self.__conn.execute("""
         INSERT INTO study_session (
+            user_id,
             session_id,
             deck_id,
             today,
@@ -60,9 +63,10 @@ class SqliteStudySessionRepository(SessionRepository):
             current_back_revealed,
             created_at,
             updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
+            data['user_id'],
             data['session_id'],
             data['deck_id'],
             data['today'],
@@ -78,17 +82,17 @@ class SqliteStudySessionRepository(SessionRepository):
         ))
         return self.get_session(data['session_id'])
     
-    def get_session(self, session_id: str) -> Session:
+    def get_session(self, user_id:int, session_id: str) -> Session:
         if not isinstance(session_id, str):
             raise ValueError("Session ID must be a string")
         row=self.__conn.execute("""
-        SELECT * FROM study_session WHERE session_id=?
+        SELECT * FROM study_session WHERE user_id=? AND session_id=?
         """,(session_id,)).fetchone()
         if row is None:
             raise ValueError("Session not found")
-        return self.__deserialize_session(row)
+        return self.__deserialize_session(user_id, row)
     
-    def update_session(self, session: Session) -> Session:
+    def update_session(self, user_id:int, session: Session) -> Session:
         data=self.__serialize_session(session)
         cursor=self.__conn.execute("""
         UPDATE study_session SET
@@ -102,18 +106,18 @@ class SqliteStudySessionRepository(SessionRepository):
         current_hint_used=?,
         current_back_revealed=?,
         updated_at=?
-        WHERE session_id=?
+        WHERE session_id=? AND user_id=?
         """,(data['deck_id'], data['today'], data['status'], data['learning_queue'], data['review_queue'], data['new_queue'], data['current_card_id'], data['current_hint_used'], data['current_back_revealed'], data['updated_at'], session.session_id))
         if cursor.rowcount==0:
             raise ValueError("Session not found")
-        return self.get_session(session.session_id)
+        return self.get_session(user_id, session.session_id)
     
-    def delete_session(self, session_id: str) -> None:
+    def delete_session(self, user_id:int, session_id: str) -> None:
         if not isinstance(session_id, str):
             raise ValueError("Session ID must be a string")
         cursor=self.__conn.execute("""
-        DELETE FROM study_session WHERE session_id=?
-        """,(session_id,))
+        DELETE FROM study_session WHERE user_id=? AND session_id=?
+        """,(user_id, session_id))
         if cursor.rowcount==0:
             raise ValueError("Session not found")
-        return session_id
+        return cursor.rowcount

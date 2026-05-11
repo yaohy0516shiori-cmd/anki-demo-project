@@ -13,6 +13,7 @@ class SqliteDeckRepository(DeckRepository):
             'deck_id':deck.deck_id,
             'deck_name':deck.deck_name,
             'deck_description':deck.deck_description,
+            'is_default':1 if deck.is_default else 0,
             'created_at':deck.created_at,
             'updated_at':deck.updated_at,
         }
@@ -23,6 +24,7 @@ class SqliteDeckRepository(DeckRepository):
             deck_id=data['deck_id'],
             deck_name=data['deck_name'] if data['deck_name'] is not None else '',
             deck_description=data['deck_description'] if data['deck_description'] is not None else '',
+            is_default=bool(data['is_default']),
             created_at=data['created_at'],
             updated_at=data['updated_at'],
         )   
@@ -30,16 +32,14 @@ class SqliteDeckRepository(DeckRepository):
     def create_deck(self, deck:Deck):
         if deck.deck_id is not None:
             raise ValueError("Deck ID must be None")
-        if self.get_deck(deck.user_id, deck.deck_id) is not None:
-            raise ValueError("Deck already exists")
-        if len(self.get_all_decks(deck.user_id))==0:
-            self.create_default_deck(deck.user_id)
+
         data=self.__serialize_deck(deck)
         cursor=self.__conn.execute("""
         INSERT INTO deck (
             user_id,
             deck_name,
             deck_description,
+            is_default,
             created_at,
             updated_at
         ) VALUES (?, ?, ?, ?, ?)
@@ -48,6 +48,7 @@ class SqliteDeckRepository(DeckRepository):
             data['user_id'],
             data['deck_name'], 
             data['deck_description'], 
+            data['is_default'],
             data['created_at'], 
             data['updated_at']
         ))
@@ -121,27 +122,37 @@ class SqliteDeckRepository(DeckRepository):
         self.__ensure_default_deck()
         return cursor.rowcount
     
-    def __ensure_default_deck(self, user_id:int):
-        row=self.__conn.execute("""
-        SELECT * FROM deck WHERE deck_id=1 AND user_id=?
-        """,(user_id,)).fetchone()
-        if row is None:
-            self.__conn.execute("""
-            INSERT INTO deck (
-            deck_id, 
-            deck_name, 
-            deck_description, 
-            created_at, 
-            updated_at) 
-            VALUES (1, 
-            'Default', 
-            'System default deck', 
-            CURRENT_TIMESTAMP, 
-            CURRENT_TIMESTAMP
-            )
-            """)
-            return self.get_deck(1)
-        return self.__deserialize_deck(row)
+    def __ensure_default_deck(self, user_id: int):
+        row = self.__conn.execute("""
+        SELECT * FROM deck
+        WHERE user_id = ? AND is_default = 1
+        """, (user_id,)).fetchone()
+
+        if row is not None:
+            return self.__deserialize_deck(row)
+
+        now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+        cursor = self.__conn.execute("""
+        INSERT INTO deck (
+            user_id,
+            deck_name,
+            deck_description,
+            is_default,
+            created_at,
+            updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            user_id,
+            "Default",
+            "System default deck",
+            1,
+            now,
+            now,
+        ))
+
+        return self.get_deck(user_id, cursor.lastrowid)
     
     def get_deck_by_name(self, deck_name:str):
         if not isinstance(deck_name,str):
@@ -152,34 +163,3 @@ class SqliteDeckRepository(DeckRepository):
         if row is None:
             raise ValueError("Deck not found")
         return self.__deserialize_deck(row)
-    
-    def create_default_deck(self, user_id:int):
-        if not isinstance(user_id,int):
-            raise ValueError("User ID must be an integer")
-        default_data={
-            'user_id':user_id,
-            'deck_id':1,
-            'deck_name':f"Default Deck for User {user_id}",
-            'deck_description':f"Default deck for the user {user_id}",
-            'created_at':datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-            'updated_at':datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-        }
-        self.__conn.execute("""
-            INSERT INTO deck (
-            user_id,
-            deck_id,
-            deck_name,
-            deck_description,
-            created_at,
-            updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (
-                default_data['user_id'],
-                default_data['deck_id'],
-                default_data['deck_name'],
-                default_data['deck_description'],
-                default_data['created_at'],
-                default_data['updated_at']
-            ))
-        return self.get_deck(user_id, 1)

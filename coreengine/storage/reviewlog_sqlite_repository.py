@@ -12,6 +12,7 @@ class SqliteReviewLogRepository(ReviewLogRepository):
             'card_id':review_log.card_id,
             'user_id':review_log.user_id,
             'deck_id':review_log.deck_id,
+            'note_id':review_log.note_id,
             'rating':review_log.rating,
             'old_status':review_log.old_status,
             'new_status':review_log.new_status,
@@ -33,7 +34,9 @@ class SqliteReviewLogRepository(ReviewLogRepository):
     
     def __deserialize_log(self,row:sqlite3.Row)->ReviewLog:
         return ReviewLog(
+            user_id=row['user_id'],
             review_log_id=row['review_log_id'],
+            note_id=row['note_id'],
             card_id=row['card_id'],
             user_id=row['user_id'],
             deck_id=row['deck_id'],
@@ -68,6 +71,7 @@ class SqliteReviewLogRepository(ReviewLogRepository):
             user_id,
             card_id,
             deck_id,
+            note_id,
             rating,
             old_status,
             new_status,
@@ -85,11 +89,12 @@ class SqliteReviewLogRepository(ReviewLogRepository):
             new_step_index,
             hint_used,
             review_time
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (user_id,
             data['card_id'], 
             data['deck_id'],
+            data['note_id'],
             data['rating'], 
             data['old_status'], 
             data['new_status'], 
@@ -132,6 +137,7 @@ class SqliteReviewLogRepository(ReviewLogRepository):
         UPDATE review_log SET user_id=?,
         card_id=?,
         deck_id=?,
+        note_id=?,
         rating=?,
         old_status=?,
         new_status=?,
@@ -153,6 +159,7 @@ class SqliteReviewLogRepository(ReviewLogRepository):
         (user_id,
         data['card_id'], 
         data['deck_id'],
+        data['note_id'],
         data['rating'], 
         data['old_status'], 
         data['new_status'], 
@@ -184,13 +191,13 @@ class SqliteReviewLogRepository(ReviewLogRepository):
             raise ValueError("User ID must be an integer")
         if not isinstance(card_id,int):
             raise ValueError("Card ID must be an integer")
-        rows=self.__conn.execute("SELECT * FROM review_log WHERE card_id=?", (card_id,)).fetchall()
+        rows=self.__conn.execute("SELECT * FROM review_log WHERE card_id=? AND user_id=?", (card_id,user_id)).fetchall()
         return [self.__deserialize_log(row) for row in rows]
     
     def get_all_logs_by_user_id(self, user_id:int)->list[ReviewLog]:
         if not isinstance(user_id,int):
             raise ValueError("User ID must be an integer")
-        rows=self.__conn.execute("SELECT * FROM review_log WHERE user_id=?", (user_id,)).fetchall()
+        rows=self.__conn.execute("SELECT * FROM review_log WHERE user_id=?", (user_id,user_id)).fetchall()
         return [self.__deserialize_log(row) for row in rows]
     
     def count_logs_by_user_id(self, user_id:int)->int:

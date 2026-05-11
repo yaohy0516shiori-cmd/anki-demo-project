@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS card (
     card_id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     note_id INTEGER NOT NULL,
-    deck_id INTEGER NOT NULL DEFAULT 1,
+    deck_id INTEGER NOT NULL,
     template_ord INTEGER NOT NULL,
     status TEXT NOT NULL,
     due TEXT NOT NULL, -- when card is generated, there should be a due date
@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS review_log (
     user_id INTEGER NOT NULL, 
     card_id INTEGER ,
     deck_id INTEGER ,
+    note_id INTEGER ,
     rating TEXT NOT NULL CHECK(rating IN ('good', 'again')),
     old_status TEXT NOT NULL CHECK(old_status IN ('new', 'learning', 'review','relearning')),
     new_status TEXT NOT NULL CHECK(new_status IN ('new', 'learning', 'review','relearning')),
@@ -99,9 +100,9 @@ CREATE TABLE IF NOT EXISTS review_log (
     hint_used BOOLEAN NOT NULL DEFAULT FALSE,
     review_time TEXT NOT NULL,
 
+    FOREIGN KEY (user_id) REFERENCES user (user_id) ON DELETE CASCADE，
     FOREIGN KEY (card_id) REFERENCES card (card_id) ON DELETE SET NULL,
     FOREIGN KEY (deck_id) REFERENCES deck (deck_id) ON DELETE SET NULL,
-    FOREIGN KEY (user_id) REFERENCES user (user_id) ON DELETE CASCADE,
     FOREIGN KEY (note_id) REFERENCES note (note_id) ON DELETE SET NULL,
 );
 -- index on card_id used for search review logs by card_id
@@ -134,7 +135,7 @@ CREATE TABLE IF NOT EXISTS study_session (
 
     FOREIGN KEY(deck_id) REFERENCES deck(deck_id),
     FOREIGN KEY(user_id) REFERENCES user(user_id) ON DELETE CASCADE,
-    FOREIGN KEY(current_card_id) REFERENCES card(card_id) ON DELETE SET NULL,
+    FOREIGN KEY(current_card_id) REFERENCES card(card_id) ON DELETE SET NULL
 );
 -- index on deck_id used for search study sessions by deck_id
 CREATE INDEX IF NOT EXISTS idx_study_session_deck_id ON study_session (deck_id);
