@@ -7,7 +7,7 @@ class NoteCreate(BaseModel):
     fields: List[str]
     tags: List[str] = []
     hint: str = ""
-    deck_id: int = 1
+    deck_id: int 
 
 
 class NoteUpdate(BaseModel):

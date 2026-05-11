@@ -31,7 +31,7 @@ class Card:
         if template_ord <0:
             raise ValueError("Temp ord must be positive")
         if deck_id is None:
-            deck_id=1
+            raise ValueError("Deck id is required")
         if not isinstance(deck_id, int) or deck_id <= 0:
             raise ValueError("Deck id is not an integer or is not positive")
         if status not in self.select_status:

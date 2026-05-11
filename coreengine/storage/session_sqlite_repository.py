@@ -80,17 +80,17 @@ class SqliteStudySessionRepository(SessionRepository):
             data['created_at'],
             data['updated_at']
         ))
-        return self.get_session(data['session_id'])
+        return self.get_session(user_id, data['session_id'])
     
     def get_session(self, user_id:int, session_id: str) -> Session:
         if not isinstance(session_id, str):
             raise ValueError("Session ID must be a string")
         row=self.__conn.execute("""
         SELECT * FROM study_session WHERE user_id=? AND session_id=?
-        """,(session_id,)).fetchone()
+        """,(user_id, session_id)).fetchone()
         if row is None:
             raise ValueError("Session not found")
-        return self.__deserialize_session(user_id, row)
+        return self.__deserialize_session(row)
     
     def update_session(self, user_id:int, session: Session) -> Session:
         data=self.__serialize_session(session)
@@ -107,7 +107,19 @@ class SqliteStudySessionRepository(SessionRepository):
         current_back_revealed=?,
         updated_at=?
         WHERE session_id=? AND user_id=?
-        """,(data['deck_id'], data['today'], data['status'], data['learning_queue'], data['review_queue'], data['new_queue'], data['current_card_id'], data['current_hint_used'], data['current_back_revealed'], data['updated_at'], session.session_id))
+        """,(
+            data['deck_id'], 
+            data['today'], 
+            data['status'], 
+            data['learning_queue'], 
+            data['review_queue'], 
+            data['new_queue'], 
+            data['current_card_id'], 
+            data['current_hint_used'], 
+            data['current_back_revealed'], 
+            data['updated_at'], 
+            session.session_id, 
+            user_id))
         if cursor.rowcount==0:
             raise ValueError("Session not found")
         return self.get_session(user_id, session.session_id)

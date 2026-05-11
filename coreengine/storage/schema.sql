@@ -27,6 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_deck_id ON deck(deck_id);
 CREATE INDEX IF NOT EXISTS idx_deck_user_id ON deck (user_id);
 -- index on is_default used for search decks by is_default
 CREATE INDEX IF NOT EXISTS idx_deck_DEFAULT ON deck (is_default);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_one_default_deck_per_user ON deck (user_id) where is_default=1;
 
 CREATE TABLE IF NOT EXISTS note (
     note_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,18 +62,14 @@ CREATE TABLE IF NOT EXISTS card (
     step_index INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(note_id,template_ord),
+
     FOREIGN KEY (note_id) REFERENCES note (note_id) ON DELETE CASCADE,
     FOREIGN KEY (deck_id) REFERENCES deck (deck_id) ,
     FOREIGN KEY (user_id) REFERENCES user (user_id) ON DELETE CASCADE,
     UNIQUE(user_id, note_id, template_ord)
 );
--- index on note_id used for search cards by note_id
-CREATE INDEX IF NOT EXISTS idx_card_note_id ON card (note_id);
--- index on deck_id used for search cards by deck_id
-CREATE INDEX IF NOT EXISTS idx_card_deck_id ON card (deck_id);
 -- index on status and due used for scheduling, which due<=today and with status
-CREATE INDEX IF NOT EXISTS idx_card_status_due ON card (status, due);
+CREATE INDEX IF NOT EXISTS idx_card_status_due ON card (user_id,status, due);
 CREATE INDEX IF NOT EXISTS idx_card_user_deck_due ON card(user_id, deck_id, due);
 CREATE INDEX IF NOT EXISTS idx_card_user_note ON card(user_id, note_id);
 
@@ -100,19 +97,15 @@ CREATE TABLE IF NOT EXISTS review_log (
     hint_used BOOLEAN NOT NULL DEFAULT FALSE,
     review_time TEXT NOT NULL,
 
-    FOREIGN KEY (user_id) REFERENCES user (user_id) ON DELETE CASCADE，
+    FOREIGN KEY (user_id) REFERENCES user (user_id) ON DELETE CASCADE,
     FOREIGN KEY (card_id) REFERENCES card (card_id) ON DELETE SET NULL,
     FOREIGN KEY (deck_id) REFERENCES deck (deck_id) ON DELETE SET NULL,
-    FOREIGN KEY (note_id) REFERENCES note (note_id) ON DELETE SET NULL,
+    FOREIGN KEY (note_id) REFERENCES note (note_id) ON DELETE SET NULL
 );
--- index on card_id used for search review logs by card_id
-CREATE INDEX IF NOT EXISTS idx_review_log_card_id ON review_log (card_id);
--- index on deck_id used for search review logs by deck_id
-CREATE INDEX IF NOT EXISTS idx_review_log_deck_id ON review_log (deck_id);
 -- index on review_time used for search review logs by review_time
-CREATE INDEX IF NOT EXISTS idx_review_log_card_time ON review_log (card_id,review_time);
+CREATE INDEX IF NOT EXISTS idx_review_log_card_time ON review_log (user_id,card_id);
 -- index on deck_id and review_time used for search review logs by deck_id and review_time
-CREATE INDEX IF NOT EXISTS idx_review_log_deck_time ON review_log (deck_id,review_time);
+CREATE INDEX IF NOT EXISTS idx_review_log_deck_time ON review_log (user_id,deck_id,review_time);
 CREATE INDEX IF NOT EXISTS idx_review_log_user_time ON review_log(user_id, review_time);
 
 CREATE TABLE IF NOT EXISTS study_session (

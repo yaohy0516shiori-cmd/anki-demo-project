@@ -53,9 +53,11 @@ class ReviewLoggerService:
             # review time?
             card.touch()
 
-            updated_card=self.__card_repo.update_card(card)
+            updated_card=self.__card_repo.update_card(user_id, card)
 
             log=ReviewLog(
+                user_id=user_id,
+                note_id=updated_card.note_id,
                 card_id=updated_card.card_id,
                 deck_id=updated_card.deck_id,
                 rating=normalized_rating,

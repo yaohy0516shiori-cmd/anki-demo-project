@@ -42,7 +42,7 @@ class SqliteDeckRepository(DeckRepository):
             is_default,
             created_at,
             updated_at
-        ) VALUES (?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?)
         """,
         (
             data['user_id'],
@@ -119,7 +119,7 @@ class SqliteDeckRepository(DeckRepository):
     
     def clear_decks(self, user_id:int):
         cursor=self.__conn.execute("DELETE FROM deck WHERE user_id=?",(user_id,))
-        self.__ensure_default_deck()
+        self.__ensure_default_deck(user_id)
         return cursor.rowcount
     
     def __ensure_default_deck(self, user_id: int):
@@ -154,12 +154,12 @@ class SqliteDeckRepository(DeckRepository):
 
         return self.get_deck(user_id, cursor.lastrowid)
     
-    def get_deck_by_name(self, deck_name:str):
+    def get_deck_by_name(self, user_id:int, deck_name:str):
         if not isinstance(deck_name,str):
             raise ValueError("Deck name must be a string")
         row=self.__conn.execute("""
-        SELECT * FROM deck WHERE deck_name=?
-        """,(deck_name,)).fetchone()
+        SELECT * FROM deck WHERE user_id=? AND deck_name=?
+        """,(user_id,deck_name)).fetchone()
         if row is None:
             raise ValueError("Deck not found")
         return self.__deserialize_deck(row)

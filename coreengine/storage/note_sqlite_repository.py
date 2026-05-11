@@ -37,6 +37,8 @@ class SqliteNoteRepository(NoteRepository):
         )
     
     def add_note(self, user_id:int, note:Note):
+        if note.user_id != user_id:
+            raise ValueError("User ID does not match")
         if note.note_id is not None:
             raise ValueError("Note ID must be None")
         if not isinstance(user_id,int):
@@ -84,6 +86,8 @@ class SqliteNoteRepository(NoteRepository):
         return self.__deserialize_note(row)
     
     def update_note(self, user_id:int, note:Note):
+        if note.user_id != user_id:
+            raise ValueError("User ID does not match")
         if note.note_id is None:
             raise ValueError("Note ID is required")
         if not isinstance(user_id,int):
@@ -110,11 +114,12 @@ class SqliteNoteRepository(NoteRepository):
             data['updated_at'],
             data['hint'],
             note.note_id,
+            user_id,
         ))
 
         if cursor.rowcount==0:
             raise ValueError("Note not found")
-        return note.note_id
+        return self.get_note(user_id, note.note_id)
     
     def delete_note(self, user_id:int, note_id:int):
         if not isinstance(note_id, int):

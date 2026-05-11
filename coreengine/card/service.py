@@ -6,9 +6,10 @@ import re
 
 
 class CardService:
-    def __init__(self, card_repo, note_repo):
+    def __init__(self, card_repo, note_repo, deck_repo):
         self.card_repo = card_repo
         self.note_repo = note_repo
+        self.deck_repo = deck_repo
 
     def create_cards_from_note(self, user_id: int, note: Note, deck_id: int, today=None):
         if note.note_id is None:
@@ -19,7 +20,9 @@ class CardService:
 
         if not isinstance(deck_id, int) or deck_id <= 0:
             raise ValueError("Deck id must be a positive integer")
-
+        deck=self.deck_repo.get_deck(user_id, deck_id)
+        if deck is None:
+            raise ValueError("Deck not found")
         created_cards = []
         default_today = today if today is not None else datetime.now(timezone.utc).date()
         now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -51,8 +54,10 @@ class CardService:
     def get_due_cards_by_deck_id(self, user_id: int, deck_id: int, today: date):
         return self.card_repo.get_due_cards_by_deck_id(user_id, deck_id, today)
 
-    def update_card(self, card: Card):
-        return self.card_repo.update_card(card)
+    def update_card(self, user_id: int, card: Card):
+        if card.user_id != user_id:
+            raise ValueError("User ID does not match")
+        return self.card_repo.update_card(user_id, card)
 
     def get_template_ords(self, note: Note):
         return self.__get_template_ords(note)

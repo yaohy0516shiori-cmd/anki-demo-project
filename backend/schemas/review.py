@@ -2,6 +2,7 @@ from pydantic import BaseModel
 
 
 class ReviewLogOut(BaseModel):
+    user_id: int
     review_log_id: int
     card_id: int
     deck_id: int

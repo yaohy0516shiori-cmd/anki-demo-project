@@ -1,12 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.app.deps import get_review_service
+from backend.app.deps import get_review_service, get_current_user_id
+
+'''
+CREATE ROUTERS HERE: API ENDPOINTS FOR REVIEWS, HTTP REQUESTS, ETC.
+'''
 
 router = APIRouter()
 
 
 def log_to_dict(log):
     return {
+        "user_id": log.user_id,
         "review_log_id": log.review_log_id,
         "card_id": log.card_id,
         "deck_id": log.deck_id,
@@ -31,9 +36,9 @@ def log_to_dict(log):
 
 
 @router.get("/cards/{card_id}")
-def get_review_logs(card_id: int, review_service=Depends(get_review_service)):
+def get_review_logs(card_id: int, review_service=Depends(get_review_service), user_id: int = Depends(get_current_user_id)):
     try:
-        logs = review_service.get_review_logs_history(card_id)
+        logs = review_service.get_review_logs_history(user_id, card_id)
         return [log_to_dict(log) for log in logs]
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
