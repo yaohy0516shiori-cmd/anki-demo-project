@@ -101,8 +101,9 @@ def get_user_service(
 def get_card_service(
     card_repo=Depends(get_card_repo),
     note_repo=Depends(get_note_repo),
+    deck_repo=Depends(get_deck_repo)
 ):
-    return CardService(card_repo, note_repo)
+    return CardService(card_repo, note_repo, deck_repo)
 
 
 def get_note_service(

@@ -36,7 +36,7 @@ def create_deck(payload: DeckCreate, deck_service=Depends(get_deck_service), use
             created_at=now,
             updated_at=now,
         )
-        saved = deck_service.create_deck(user_id, deck)
+        saved = deck_service.create_deck(deck)
         return deck_to_dict(saved)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -75,8 +75,8 @@ def update_deck(deck_id: int, payload: DeckUpdate, deck_service=Depends(get_deck
 def delete_deck(deck_id: int, hard: bool = False, deck_service=Depends(get_deck_service), user_id: int = Depends(get_current_user_id)):
     try:
         if hard:
-            return deck_service.delete_deck_and_cards(deck_id)
-        message = deck_service.delete_deck(deck_id)
+            return deck_service.delete_deck_and_cards(user_id, deck_id)
+        message = deck_service.delete_deck(user_id, deck_id)
         return message
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

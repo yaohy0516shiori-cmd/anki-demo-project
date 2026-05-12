@@ -102,20 +102,17 @@ class NoteService:
             raise ValueError("Note id must be a positive integer")
 
         with self.__transaction():
-            card_before=self.__card_service.get_cards_by_note_id(user_id, note_id)
-            card_delete_result = self.__card_service.delete_cards_by_note_id(user_id, note_id) if self.__card_service is not None else 0
+            card_delete_result = self.__card_service.delete_cards_by_note_id(user_id, note_id)
+            deleted_card_count = card_delete_result["deleted_card_count"]
             deleted_note_count = self.__repository_note.delete_note(user_id, note_id)
             
 
 
         return {
-            "message": (
-                f"deleted {deleted_note_count} note "
-                f"and {card_delete_result} cards for note {note_id}"
-            ),
+            "message": f"deleted {deleted_note_count} note and {deleted_card_count} cards for note {note_id}",
             "note_id": note_id,
             "deleted_note_count": deleted_note_count,
-            "deleted_card_count": card_delete_result,
+            "deleted_card_count": deleted_card_count,
         }
         
     def is_duplicate(self, user_id:int, fields, note_type_id, exclude_note_id=None):

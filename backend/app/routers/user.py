@@ -25,7 +25,7 @@ def register_user(
         user_id = user_service.register_user(
             email=payload.email,
             username=payload.username,
-            password_hash=payload.password,
+            password=payload.password,
         )
         user = user_service.get_user(user_id)
         return user_to_dict(user)

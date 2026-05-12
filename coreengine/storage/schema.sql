@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS user (
     email TEXT NOT NULL,
     username TEXT NOT NULL,
     password_hash TEXT NOT NULL,
+    phone TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
