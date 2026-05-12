@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.app.deps import get_user_service, get_current_user_id
-from backend.schemas.user import UserRegister, UserOut, UserLogin, TokenOut
+from backend.schemas.users import UserRegister, UserOut, UserLogin, TokenOut
+from backend.app.auth import create_access_token
 
 router = APIRouter()
 
@@ -52,7 +53,7 @@ def login_user(
     try:
         user = user_service.login(payload.email, payload.password)
         return {
-            "access_token": str(user.user_id),
+            "access_token": create_access_token(user.user_id),
             "token_type": "bearer",
         }
     except ValueError as e:

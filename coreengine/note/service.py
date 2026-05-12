@@ -11,13 +11,14 @@ from contextlib import nullcontext
 
 
 class NoteService:
-    def __init__(self, repository_note, card_service,transaction_manager=None):
+    def __init__(self, repository_note, card_service, deck_repo, transaction_manager=None):
         if repository_note is None:
             raise ValueError("Repository note is not set")
         if card_service is None:
             raise ValueError("Card service is not set")
         self.__repository_note = repository_note
         self.__card_service = card_service
+        self.__deck_repo = deck_repo
         self.__transaction_manager = transaction_manager
 
     def __transaction(self):
@@ -33,8 +34,14 @@ class NoteService:
         tags=tags if tags is not None else []
         if not isinstance(user_id, int) or user_id <= 0:
             raise ValueError("User id must be a positive integer")
-        if not isinstance(deck_id, int) or deck_id <= 0 or deck_id is None:
+        if deck_id is None:
+            deck = self.__deck_repo.get_default_deck(user_id)
+            if deck is None:
+                raise ValueError("Default deck not found")
+            deck_id = deck.deck_id
+        if not isinstance(deck_id, int) or deck_id <= 0:
             raise ValueError("Deck id must be a positive integer")
+        
 
         self.__validate_fields(user_id, note_type, fields)
         if self.is_duplicate(user_id, fields,note_type.note_type_id):
@@ -125,10 +132,11 @@ class NoteService:
                 return True
         return False
 
-    def __validate_fields(self, user_id:int, note_type:NoteType, fields):
-        # validate the fields of the note
-        if len(fields) != len(note_type.field_names):   
-            raise ValueError("The number of fields is not equal to the number of field names")
+    def __validate_fields(self, user_id: int, note_type: NoteType, fields):
         if not isinstance(fields, list) or not all(isinstance(field, str) for field in fields):
-            raise ValueError("Fields must be a list of strings")
-        return True
+            raise ValueError("Fields must be a list of strings")  # 先确认 fields 是字符串列表
+
+        if len(fields) != len(note_type.field_names):
+            raise ValueError("The number of fields is not equal to the number of field names")  # 再检查字段数量
+
+        return True  # 校验通过

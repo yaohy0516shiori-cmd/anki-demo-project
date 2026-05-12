@@ -61,7 +61,8 @@ class UserService:
         return self.__user_repo.update_user_email(user_id, email)
     
     def update_user_password(self, user_id: int, password: str):
-        return self.__user_repo.update_user_password(user_id, password)
+        password_hash = hash_password(password)
+        return self.__user_repo.update_user_password(user_id, password_hash)
     
     def delete_user(self, user_id: int):
         return self.__user_repo.delete_user(user_id)
@@ -73,7 +74,7 @@ def hash_password(password: str):
     salt = secrets.token_hex(16)
     interations=100_000
     digest=hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), interations, dklen=32).hex()
-    return f"pbkdf2_sha256${interations}${salt.hex()}${digest}"
+    return f"pbkdf2_sha256${interations}${salt}${digest}"
     
 def verify_password(password: str, password_hash: str):
     try:

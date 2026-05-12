@@ -1,10 +1,9 @@
 from datetime import datetime, timedelta,timezone
-from jose import JWTError
 import jwt
 from fastapi import HTTPException
 import os
 
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me-minimum-32-bytes-long") # if not set, use a default value
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60*24
 

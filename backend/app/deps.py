@@ -65,11 +65,6 @@ def get_conn()->Generator[sqlite3.Connection,None,None]:
 def get_transaction_manager(conn=Depends(get_conn)):
     return SqliteTransactionManager(conn)
 
-def get_current_user_id(x_user_id: str = Header(..., alias="X-User-ID")):
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    return int(x_user_id)
-
 def get_user_repo(conn=Depends(get_conn)):
     return SqliteUserRepository(conn)
 
@@ -109,9 +104,10 @@ def get_card_service(
 def get_note_service(
     note_repo=Depends(get_note_repo),
     card_service=Depends(get_card_service),
+    deck_repo=Depends(get_deck_repo),
     transaction_manager=Depends(get_transaction_manager),
 ):
-    return NoteService(note_repo, card_service, transaction_manager)
+    return NoteService(note_repo, card_service, deck_repo, transaction_manager)
 
 
 def get_deck_service(
