@@ -26,14 +26,14 @@ class NoteService:
             return nullcontext()
         return self.__transaction_manager.transaction()
 
-    def create_note(self, user_id:int, note_type, fields, tags=None, hint=None, deck_id=1, today=None):
+    def create_note(self, user_id:int, note_type, fields, tags=None, hint=None, deck_id=None, today=None):
         # create a note: validate, deduplicate, construct Note, save to repo
         # deck_id is 0 by default, if deck_id is not set, the note will be created in the default deck
         hint=hint if hint is not None else ''
         tags=tags if tags is not None else []
         if not isinstance(user_id, int) or user_id <= 0:
             raise ValueError("User id must be a positive integer")
-        if not isinstance(deck_id, int) or deck_id <= 0:
+        if not isinstance(deck_id, int) or deck_id <= 0 or deck_id is None:
             raise ValueError("Deck id must be a positive integer")
 
         self.__validate_fields(user_id, note_type, fields)
@@ -87,14 +87,13 @@ class NoteService:
         note.hint=new_hint
         note.refresh()
         with self.__transaction():
-            updated_note_id = self.__repository_note.update_note(user_id, note)
-            updated_note = self.__repository_note.get_note(user_id, updated_note_id)
+            updated_note = self.__repository_note.update_note(user_id, note)
 
             # it means the note is a cloze note and the fields have changed, so we need to reconcile the cards
             if old_fields!=new_fields:
                 self.__card_service.reconcile_cards_for_note(user_id, updated_note, today=today)
 
-        return updated_note_id
+        return updated_note.note_id
 
     def delete_note(self, user_id:int, note_id:int):
         # delete a note from the repository

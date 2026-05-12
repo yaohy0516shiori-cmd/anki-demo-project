@@ -18,9 +18,13 @@ def create_access_token(user_id: int):
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 # function to decode access token, used to get user id from token
-def decode_access_token(token: str):
+def decode_access_token(token: str) -> int:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload["sub"]
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Could not validate credentials")
+        user_id = int(payload["sub"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    if user_id <= 0:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    return user_id

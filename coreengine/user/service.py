@@ -23,7 +23,7 @@ class UserService:
             raise ValueError("Email already exists")
         
         with self.__transaction():
-            user = User(email=email, username=username, password_hash=self.hash_password(password))
+            user = User(email=email, username=username, password_hash=hash_password(password))
             user_id = self.__user_repo.add_user(user)
 
             default_deck=Deck(
@@ -41,8 +41,8 @@ class UserService:
         user = self.__user_repo.get_user_by_email(email)
         if user is None:
             raise ValueError("User not found")
-        if not self.verify_password(password, user.password_hash):
-            raise ValueError("Invalid password")
+        if not verify_password(password, user.password_hash) or user is None:
+            raise ValueError("Invalid password or email")
         return user
     
     def get_user(self, user_id: int):
@@ -65,23 +65,24 @@ class UserService:
     
     def delete_user(self, user_id: int):
         return self.__user_repo.delete_user(user_id)
-    
-    def hash_password(self, password: str):
-        salt = secrets.token_bytes(16)
-        interations=100_000
-        digest=hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), interations, dklen=32).hex()
-        return f"pbkdf2_sha256${interations}${salt.hex()}${digest}"
-    
-    def verify_password(self, password: str, password_hash: str):
-        try:
-            algorithm, interations, salt, expected = password_hash.split("$")
-            if algorithm != "pbkdf2_sha256":
-                return False
-            
-            digest=hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), int(interations), dklen=32).hex()
-            return hmac.compare_digest(digest, expected)
-        except Exception:
-            return False
-    
+
     def get_password_hash(self, password: str):
-        return self.hash_password(password)
+        return hash_password(password)
+    
+def hash_password(password: str):
+    salt = secrets.token_hex(16)
+    interations=100_000
+    digest=hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), interations, dklen=32).hex()
+    return f"pbkdf2_sha256${interations}${salt.hex()}${digest}"
+    
+def verify_password(password: str, password_hash: str):
+    try:
+        algorithm, interations, salt, expected = password_hash.split("$")
+        if algorithm != "pbkdf2_sha256":
+            return False
+            
+        digest=hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), int(interations), dklen=32).hex()
+        return hmac.compare_digest(digest, expected)
+    except Exception:
+        return False
+    

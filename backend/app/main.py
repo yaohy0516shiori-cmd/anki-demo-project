@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from backend.app.routers import notes, decks, reviews, study, user
+from backend.app.routers import notes, decks, reviews, study, users
 from fastapi.middleware.cors import CORSMiddleware
 '''
 CREATE FASTAPI APP HERE, LOADING ROUTERS HERE
@@ -11,7 +11,7 @@ CREATE FASTAPI APP HERE, LOADING ROUTERS HERE
 app = FastAPI(title="Memory Anki Demo API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -21,7 +21,7 @@ app.include_router(notes.router, prefix="/notes", tags=["notes"])
 app.include_router(decks.router, prefix="/decks", tags=["decks"])
 app.include_router(reviews.router, prefix="/reviews", tags=["reviews"])
 app.include_router(study.router, prefix="/study", tags=["study"])
-app.include_router(user.router, prefix="/user", tags=["user"])
+app.include_router(users.router, prefix="/users", tags=["users"])
 
 @app.get("/health")
 def health():
