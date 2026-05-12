@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS user (
     user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
     username TEXT NOT NULL,
     password_hash TEXT NOT NULL,
     phone TEXT,
@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS note (
 );
 -- used for search note by note_type_id and checksum, which is unique for each note
 CREATE INDEX IF NOT EXISTS idx_note_user_checksum ON note (user_id,note_type_id,checksum);
+CREATE INDEX IF NOT EXISTS idx_note_user_id ON note (user_id,note_id);
 
 CREATE TABLE IF NOT EXISTS card (
     card_id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -9,14 +9,13 @@ CREATE ROUTERS HERE: API ENDPOINTS FOR STUDY, HTTP REQUESTS, ETC.
 '''
 router = APIRouter()
 
-
-class StudySessionStart(BaseModel):
-    deck_id: int
-    today: date | None = None
-
-
-class StudyRating(BaseModel):
-    rating: str
+from backend.schemas.study import (
+    StudySessionStart,
+    StudyRating,
+    StudySessionStartOut,
+    StudyNextCardOut,
+    StudyFinishedOut,
+)
 
 
 @router.post("/sessions")
@@ -57,6 +56,35 @@ def reveal_back(session_id: str, study_service=Depends(get_study_service), user_
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+def card_to_dict(card):
+    return card.to_dict()
+
+
+def review_log_to_dict(log):
+    return {
+        "user_id": log.user_id,
+        "review_log_id": log.review_log_id,
+        "card_id": log.card_id,
+        "deck_id": log.deck_id,
+        "note_id": log.note_id,
+        "rating": log.rating,
+        "old_status": log.old_status,
+        "new_status": log.new_status,
+        "old_due": log.old_due.isoformat() if hasattr(log.old_due, "isoformat") else log.old_due,
+        "new_due": log.new_due.isoformat() if hasattr(log.new_due, "isoformat") else log.new_due,
+        "old_interval": log.old_interval,
+        "new_interval": log.new_interval,
+        "old_ease": log.old_ease,
+        "new_ease": log.new_ease,
+        "old_lapses": log.old_lapses,
+        "new_lapses": log.new_lapses,
+        "old_reps": log.old_reps,
+        "new_reps": log.new_reps,
+        "old_step_index": log.old_step_index,
+        "new_step_index": log.new_step_index,
+        "hint_used": log.hint_used,
+        "review_time": log.review_time,
+    }
 
 @router.post("/sessions/{session_id}/rate")
 def rate_current_card(
@@ -66,7 +94,11 @@ def rate_current_card(
     user_id: int = Depends(get_current_user_id),
 ):
     try:
-        return study_service.rate_current_card(user_id, session_id, payload.rating)
+        result = study_service.rate_current_card(user_id, session_id, payload.rating)
+        return {
+            "card": card_to_dict(result["card"]),
+            "review_log": review_log_to_dict(result["log"]),
+        }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

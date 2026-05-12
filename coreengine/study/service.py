@@ -85,60 +85,61 @@ class StudyService:
 
     # Pop the next card from session queues and render front/back
     def get_next_card(self, user_id:int, session_id: str):
-        session = self.__get_session_or_raise(user_id, session_id)
+        with self.__transaction():
+            session = self.__get_session_or_raise(user_id, session_id)
 
-        if session.current_card_id is not None:
-            raise ValueError("Finish the current card before getting the next one")
+            if session.current_card_id is not None:
+                raise ValueError("Finish the current card before getting the next one")
 
-        card_id = self.__pop_next_card_id(session)
-        if card_id is None:
-            return None
+            card_id = self.__pop_next_card_id(session)
+            if card_id is None:
+                return None
 
-        session.current_card_id = card_id
-        session.current_hint_used = False
-        session.current_back_revealed = False
-        self.__session_repo.update_session(user_id, session)
+            session.current_card_id = card_id
+            session.current_hint_used = False
+            session.current_back_revealed = False
+            self.__session_repo.update_session(user_id, session)
 
-        card = self.__card_repo.get_card(user_id, card_id)
-        note = self.__note_repo.get_note(user_id, card.note_id)
-        if note is None:
-            raise ValueError("Note not found")
+            card = self.__card_repo.get_card(user_id, card_id)
+            note = self.__note_repo.get_note(user_id, card.note_id)
+            if note is None:
+                raise ValueError("Note not found")
 
-        rendered = render_card(card, note)
+            rendered = render_card(card, note)
 
-        return {
-            "user_id":user_id,
-            "session_id": session.session_id,
-            "card": {
-                "card_id": card.card_id,
-                "note_id": card.note_id,
-                "deck_id": card.deck_id,
-                "template_ord": card.template_ord,
+            return {
+                "user_id":user_id,
+                "session_id": session.session_id,
+                "card": {
+                    "card_id": card.card_id,
+                    "note_id": card.note_id,
+                    "deck_id": card.deck_id,
+                    "template_ord": card.template_ord,
+                    "status": card.status,
+                    "due": card.due.isoformat(),
+                    "interval": card.interval,
+                    "ease": card.ease,
+                    "reps": card.reps,
+                    "lapses": card.lapses,
+                    "step_index": card.step_index,
+                },
+                "note": {
+                    "note_id": note.note_id,
+                    "note_type_id": note.note_type_id,
+                    "fields": note.fields,
+                    "tags": note.tags,
+                    "hint": note.hint,
+                    "sort_field": note.sort_field,
+                    "checksum": note.checksum,
+                    "created_at": note.created_at,
+                    "updated_at": note.updated_at,
+                },
+                "front": rendered["front"],
                 "status": card.status,
-                "due": card.due.isoformat(),
-                "interval": card.interval,
-                "ease": card.ease,
-                "reps": card.reps,
-                "lapses": card.lapses,
                 "step_index": card.step_index,
-            },
-            "note": {
-                "note_id": note.note_id,
-                "note_type_id": note.note_type_id,
-                "fields": note.fields,
-                "tags": note.tags,
-                "hint": note.hint,
-                "sort_field": note.sort_field,
-                "checksum": note.checksum,
-                "created_at": note.created_at,
-                "updated_at": note.updated_at,
-            },
-            "front": rendered["front"],
-            "status": card.status,
-            "step_index": card.step_index,
-            "deck_id": session.deck_id,
-            "hint_available": bool(note.hint and note.hint.strip()),
-        }
+                "deck_id": session.deck_id,
+                "hint_available": bool(note.hint and note.hint.strip()),
+            }
     
     # Submit rating for current card, call review service, and re-enqueue if needed
     def rate_current_card(self, user_id:int, session_id: str, rating: str):
@@ -169,40 +170,42 @@ class StudyService:
         return result
 
     def reveal_back_of_current_card(self, user_id:int, session_id: str):
-        session = self.__get_session_or_raise(user_id, session_id)
+        with self.__transaction():
+            session = self.__get_session_or_raise(user_id, session_id)
 
-        if session.current_card_id is None:
-            raise ValueError("No current card to reveal")
+            if session.current_card_id is None:
+                raise ValueError("No current card to reveal")
 
-        card = self.__card_repo.get_card(user_id, session.current_card_id)
-        note = self.__note_repo.get_note(user_id, card.note_id)
-        if note is None:
-            raise ValueError("Note not found")
+            card = self.__card_repo.get_card(user_id, session.current_card_id)
+            note = self.__note_repo.get_note(user_id, card.note_id)
+            if note is None:
+                raise ValueError("Note not found")
 
-        session.current_back_revealed = True
-        self.__session_repo.update_session(user_id, session)
+            session.current_back_revealed = True
+            self.__session_repo.update_session(user_id, session)
 
-        return render_card(card, note)["back"]
+            return render_card(card, note)["back"]
 
     def reveal_hint_of_current_card(self, user_id:int, session_id: str):
-        session = self.__get_session_or_raise(user_id, session_id)
+        with self.__transaction():
+            session = self.__get_session_or_raise(user_id, session_id)
 
-        if session.current_card_id is None:
-            raise ValueError("No current card to reveal")
-        if session.current_back_revealed:
-            raise ValueError("Back of the current card has already been revealed")
+            if session.current_card_id is None:
+                raise ValueError("No current card to reveal")
+            if session.current_back_revealed:
+                raise ValueError("Back of the current card has already been revealed")
 
-        card = self.__card_repo.get_card(user_id, session.current_card_id)
-        note = self.__note_repo.get_note(user_id, card.note_id)
-        if note is None:
-            raise ValueError("Note not found")
+            card = self.__card_repo.get_card(user_id, session.current_card_id)
+            note = self.__note_repo.get_note(user_id, card.note_id)
+            if note is None:
+                raise ValueError("Note not found")
 
-        hint_text = render_hint(note)
-        if hint_text:
-            session.current_hint_used = True
-            self.__session_repo.update_session(user_id, session)
-            return hint_text
-        return ""
+            hint_text = render_hint(note)
+            if hint_text:
+                session.current_hint_used = True
+                self.__session_repo.update_session(user_id, session)
+                return hint_text
+            return ""
 
     # Check if the study session is finished
     def is_finished(self, user_id:int, session_id: str) -> bool:

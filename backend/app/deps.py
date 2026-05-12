@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Generator
 import sqlite3
-
+from backend.app.auth import decode_access_token
 from fastapi import Depends, Header, HTTPException
 
 from coreengine.storage.sqlite_connection import (
@@ -139,3 +139,9 @@ def get_study_service(
     transaction_manager=Depends(get_transaction_manager),
 ):
     return StudyService(card_repo, review_service, note_repo, deck_repo, session_repo, transaction_manager)
+
+def get_current_user_id(authorization: str = Header(..., alias="Authorization")):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    token = authorization.removeprefix("Bearer ").strip()
+    return decode_access_token(token)

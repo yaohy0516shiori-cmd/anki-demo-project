@@ -17,6 +17,8 @@ from coreengine.deck.service import DeckService
 from coreengine.reviewlogger.service import ReviewLoggerService
 from coreengine.study.service import StudyService
 
+from coreengine.storage.user_sqlite_repository import SqliteUserRepository
+from coreengine.user.service import UserService
 from coreengine.scheduler.simple_scheduler import Scheduler_v1
 from coreengine.note_type.type_registry import BASIC, BASIC_REVERSE, CLOZE
 from coreengine.deck.deckmodel import Deck
@@ -36,10 +38,25 @@ def app_ctx(tmp_path):
     session_repo = InMemoryStudySessionRepository()
     transaction_manager = SqliteTransactionManager(conn)
 
-    card_service = CardService(card_repo, note_repo, transaction_manager=transaction_manager)
-    note_service = NoteService(note_repo, card_service, transaction_manager=transaction_manager)
-    deck_service = DeckService(deck_repo, card_service, transaction_manager=transaction_manager)
+    card_service = CardService(card_repo, note_repo, deck_repo)
+    note_service = NoteService(note_repo, card_service, deck_repo)
+    deck_service = DeckService(deck_repo, card_service, note_service)
+    user_repo = SqliteUserRepository(conn)
+    user_service = UserService(user_repo, deck_repo, transaction_manager)
 
+    user1_id = user_service.register_user(
+        email="user1@example.com",
+        username="user1",
+        password="password",
+    )
+
+    user2_id = user_service.register_user(
+        email="user2@example.com",
+        username="user2",
+        password="password",
+    )
+
+    default_deck = deck_repo.get_default_deck(user1_id)
     # learning_steps=1 / relearning_steps=1 是为了让测试流程更短：
     # 第一次 good: new -> learning
     # 第二次 good: learning -> review

@@ -132,7 +132,7 @@ class SqliteReviewLogRepository(ReviewLogRepository):
         if not isinstance(review_log.review_log_id,int):
             raise ValueError("Review log ID must be an integer")
         data=self.__serialize_log(review_log)
-        self.__conn.execute("""
+        cursor=self.__conn.execute("""
         UPDATE review_log SET user_id=?,
         card_id=?,
         deck_id=?,
@@ -176,7 +176,12 @@ class SqliteReviewLogRepository(ReviewLogRepository):
         data['new_step_index'], 
         data['hint_used'],
         data['review_time'],
-        review_log.review_log_id))
+        review_log.review_log_id,
+        user_id
+        ))
+        if cursor.rowcount==0:
+            raise ValueError("Review log not found")
+        return self.get_log(user_id, review_log.review_log_id)
     
     def delete_log(self, user_id:int, review_log_id:int):
         if not isinstance(user_id,int):
@@ -196,7 +201,7 @@ class SqliteReviewLogRepository(ReviewLogRepository):
     def get_all_logs_by_user_id(self, user_id:int)->list[ReviewLog]:
         if not isinstance(user_id,int):
             raise ValueError("User ID must be an integer")
-        rows=self.__conn.execute("SELECT * FROM review_log WHERE user_id=?", (user_id)).fetchall()
+        rows=self.__conn.execute("SELECT * FROM review_log WHERE user_id=?", (user_id,)).fetchall()
         return [self.__deserialize_log(row) for row in rows]
     
     def count_logs_by_user_id(self, user_id:int)->int:

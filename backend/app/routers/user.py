@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.app.deps import get_user_service, get_current_user_id
-from backend.schemas.user import UserRegister, UserOut
+from backend.schemas.user import UserRegister, UserOut, UserLogin, TokenOut
 
 router = APIRouter()
 
@@ -43,3 +43,17 @@ def get_me(
         return user_to_dict(user)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+@router.post("/login", response_model=TokenOut)
+def login_user(
+    payload: UserLogin,
+    user_service=Depends(get_user_service),
+):
+    try:
+        user = user_service.login(payload.email, payload.password)
+        return {
+            "access_token": str(user.user_id),
+            "token_type": "bearer",
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e))

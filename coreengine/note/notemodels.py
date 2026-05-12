@@ -75,7 +75,12 @@ class Note:
         if not self.updated_at:
             self.updated_at=now
 
-
+    @staticmethod
+    def __validate_user_id(user_id:int):
+        # validate the id of the user
+        if not isinstance(user_id, int) or user_id <= 0:
+            raise ValueError("User id is not an integer or is not positive")
+        return True
 
     @staticmethod
     def __validation_content(value,name:str):
