@@ -1,22 +1,18 @@
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-
+from backend.schemas.study import (
+    StudySessionStart,
+    StudyRating,
+    StudySessionStartOut,
+    StudyNextOut,
+)
 from backend.app.deps import get_study_service, get_current_user_id
 
 '''
 CREATE ROUTERS HERE: API ENDPOINTS FOR STUDY, HTTP REQUESTS, ETC.
 '''
 router = APIRouter()
-
-from backend.schemas.study import (
-    StudySessionStart,
-    StudyRating,
-    StudySessionStartOut,
-    StudyNextCardOut,
-    StudyFinishedOut,
-)
-
 
 @router.post("/sessions")
 def start_session(payload: StudySessionStart, study_service=Depends(get_study_service), user_id: int = Depends(get_current_user_id)):
@@ -30,13 +26,37 @@ def start_session(payload: StudySessionStart, study_service=Depends(get_study_se
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/sessions/{session_id}/next")
-def get_next_card(session_id: str, study_service=Depends(get_study_service), user_id: int = Depends(get_current_user_id)):
+@router.get("/sessions/{session_id}/next", response_model=StudyNextOut)
+def get_next_card(
+    session_id: str,
+    study_service=Depends(get_study_service),
+    user_id: int = Depends(get_current_user_id),
+):
     try:
+        # 调用核心学习服务，尝试取下一张卡
         result = study_service.get_next_card(user_id, session_id)
+
+        # result is None 表示当前 session 没有下一张卡了
         if result is None:
-            return {"finished": True}
-        return result
+            return {
+                "finished": True,          # 告诉前端：学习完成
+                "user_id": user_id,        # 当前用户 id
+                "session_id": session_id,  # 当前 session id
+                "card": None,              # 没有当前卡
+                "note": None,              # 没有当前 note
+                "front": None,             # 没有正面内容
+                "status": None,            # 没有卡片状态
+                "step_index": None,        # 没有学习步骤
+                "deck_id": None,           # 没有当前 deck/card 对应值
+                "hint_available": False,   # 没有卡，所以没有 hint
+            }
+
+        # 有下一张卡时，也补上 finished=False
+        return {
+            "finished": False,  # 告诉前端：还有卡，继续显示卡片
+            **result,           # 保留原来 service 返回的 user_id/session_id/card/note/front 等数据
+        }
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

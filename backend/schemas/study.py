@@ -47,18 +47,16 @@ class StudyNoteOut(BaseModel):
     updated_at: str
 
 
-class StudyNextCardOut(BaseModel):
+class StudyNextOut(BaseModel):
+    finished: bool
     user_id: int
     session_id: str
-    card: StudyCardOut
-    note: StudyNoteOut
-    front: str
-    status: str
+    card: StudyCardOut | None = None
+    note: StudyNoteOut | None = None
+    front: str | None = None
+    status: str | None = None
     step_index: int | None = None
-    deck_id: int
-    hint_available: bool
+    deck_id: int | None = None
+    hint_available: bool = False
 
-
-class StudyFinishedOut(BaseModel):
-    finished: bool
     
