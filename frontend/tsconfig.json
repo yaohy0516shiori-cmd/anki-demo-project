@@ -1,10 +1,7 @@
 {
-  "compilerOptions": {
-    "module": "esnext",
-    "target": "es2020",
-    "moduleResolution": "bundler",
-    "noEmit": true,
-    "skipLibCheck": true
-  },
-  "include": ["src"]
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
 }
