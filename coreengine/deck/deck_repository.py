@@ -47,3 +47,7 @@ class DeckRepository(ABC):
     @abstractmethod
     def get_deck_by_name(self, user_id: int, deck_name: str) -> Deck:
         pass
+
+    @abstractmethod
+    def ensure_created(self, user_id: int) -> Deck:
+        pass

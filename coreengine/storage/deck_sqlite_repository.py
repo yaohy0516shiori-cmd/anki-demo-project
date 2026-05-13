@@ -163,3 +163,6 @@ class SqliteDeckRepository(DeckRepository):
         if row is None:
             raise ValueError("Deck not found")
         return self.__deserialize_deck(row)
+
+    def ensure_created(self, user_id:int):
+        return self.__ensure_default_deck(user_id)

@@ -26,14 +26,7 @@ class UserService:
             user = User(email=email, username=username, password_hash=hash_password(password))
             user_id = self.__user_repo.add_user(user)
 
-            default_deck=Deck(
-                deck_name="Default",
-                deck_description=f"Default deck for the user {username}",
-                user_id=user_id,
-                is_default=True
-            )
-
-            self.__deck_repo.create_deck(default_deck)
+            self.__deck_repo.ensure_created(user_id)
 
         return user_id
 

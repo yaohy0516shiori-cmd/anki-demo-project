@@ -17,6 +17,7 @@ def user_to_dict(user):
     }
 
 # create a new user
+# 暴露给前端的接口，前端发送请求，后端处理请求，返回响应 /users/register
 @router.post("/register", response_model=UserOut)
 def register_user(
     payload: UserRegister,
