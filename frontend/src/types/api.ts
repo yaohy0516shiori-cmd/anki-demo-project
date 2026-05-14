@@ -1,95 +1,166 @@
-// api.ts和fastapi里schemas对应，用于定义后端返回的数据结构，前端数据校验
-
-// 登录接口 POST /users/login 返回的数据类型
-export type TokenResponse = {
-  access_token: string; // 后端返回的 JWT token，前端要保存
-  token_type: "bearer"; // token 类型，当前固定是 bearer
+export type StudySessionStart = {
+  deck_id: number;
+  today: string | null;
 };
 
-// 用户信息类型
-export type UserOut = {
-  user_id: number; // 用户 id
-  email: string; // 用户邮箱
-  username: string; // 用户名
-  created_at: string; // 创建时间
-  updated_at: string; // 更新时间
+export type StudySessionStatusOut = {
+  finished: boolean;
 };
 
-// Deck 类型
-export type DeckOut = {
-  user_id: number; // deck 属于哪个用户
-  deck_id: number; // deck id
-  deck_name: string; // deck 名称
-  deck_description: string; // deck 描述
-  is_default: boolean; // 是否是默认 deck
-  created_at: string; // 创建时间
-  updated_at: string; // 更新时间
-};
+export type StudyRating = "good" | "again";
 
-// Note 类型
-export type NoteOut = {
-  user_id: number; // note 属于哪个用户
-  note_id: number; // note id
-  note_type_id: number; // note 类型 id
-  fields: string[]; // 字段，例如 ["front", "back"]
-  tags: string[]; // 标签
-  hint: string; // 提示
-  sort_field: string; // 排序字段
-  checksum: string; // 内容校验值
-  created_at: string; // 创建时间
-  updated_at: string; // 更新时间
-};
-
-// 学习 session 开始后返回的数据
-export type StudySessionStartOut = {
-  session_id: string; // 当前学习 session 的 id
-  deck_id: number; // 当前学习的 deck id
-  new_queue: number; // 新卡数量
-  learning_queue: number; // 学习中卡数量
-  review_queue: number; // 复习卡数量
-};
-
-// Study 页面里使用的 card 类型
-export type StudyCardOut = {
-  card_id: number; // card id
-  note_id: number; // 所属 note id
-  deck_id: number; // 所属 deck id
-  template_ord: number; // 模板编号
-  status: string; // new / learning / review / relearning
-  due: string; // 到期日期
-  interval: number; // 复习间隔
-  ease: number; // ease 系数
-  reps: number; // 复习次数
-  lapses: number; // 忘记次数
-  step_index: number | null; // learning 阶段步骤，没有则为 null
-};
-
-// 获取下一张卡的返回类型
-export type StudyNextOut = {
-  finished: boolean; // 是否已经学完
-  user_id: number; // 当前用户 id
-  session_id: string; // 当前 session id
-  card: StudyCardOut | null; // 有卡时是 card，没有时是 null
-  note: NoteOut | null; // 有卡时是 note，没有时是 null
-  front: string | null; // 卡片正面内容
-  status: string | null; // 当前卡片状态
-  step_index: number | null; // 当前学习步骤
-  deck_id: number | null; // 当前 deck id
-  hint_available: boolean; // 是否有 hint
-};
-
-// 显示 hint 后返回的数据
 export type StudyHintOut = {
-  hint: string; // hint 内容
+  hint: string;
 };
 
-// 显示 back 后返回的数据
 export type StudyBackOut = {
-  back: string; // 背面答案
+  back: string;
 };
 
-// 评分后返回的数据
+export type StudySessionStartOut = {
+  user_id: number;
+  session_id: string;
+  deck_id: number;
+  deck_name: string;
+  learning_queue: number;
+  review_queue: number;
+  new_queue: number;
+};
+
+export type StudyCardOut = {
+  card_id: number;
+  note_id: number;
+  deck_id: number;
+  template_ord: number;
+  status: string;
+  due: string;
+  interval: number;
+  ease: number;
+  reps: number;
+  lapses: number;
+  step_index: number | null;
+};
+
+export type StudyNoteOut = {
+  note_id: number;
+  note_type_id: number;
+  fields: string[];
+  tags: string[];
+  hint: string;
+  sort_field: string;
+  checksum: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type StudyNextOut = {
+  finished: boolean;
+  user_id: number;
+  session_id: string;
+  card: StudyCardOut | null;
+  note: StudyNoteOut | null;
+  front: string | null;
+  status: string | null;
+  step_index: number | null;
+  deck_id: number | null;
+  hint_available: boolean;
+};
+
+export type DeckCreate = {
+  deck_name: string;
+  deck_description: string;
+};
+
+export type DeckUpdate = {
+  deck_name: string | null;
+  deck_description: string | null;
+};
+
+export type DeckOut = {
+  user_id: number;
+  deck_id: number;
+  deck_name: string;
+  deck_description: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type StudyRateOut = {
-  card: StudyCardOut; // 更新后的 card
-  log: unknown; // review log，暂时先用 unknown
+  card: StudyCardOut;
+  review_log: ReviewLogOut;
+};
+
+export type NoteCreate = {
+  note_type_id: number;
+  fields: string[];
+  tags: string[];
+  hint: string;
+  deck_id: number | null;
+};
+
+export type NoteUpdate = {
+  fields: string[] | null;
+  tags: string[] | null;
+  hint: string | null;
+};
+
+export type NoteOut = {
+  note_id: number;
+  note_type_id: number;
+  fields: string[];
+  tags: string[];
+  hint: string;
+  sort_field: string;
+  checksum: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ReviewLogOut = {
+  user_id: number;
+  review_log_id: number;
+  card_id: number;
+  deck_id: number;
+  rating: string;
+  old_status: string;
+  new_status: string;
+  old_due: string | null;
+  new_due: string | null;
+  old_interval: number;
+  new_interval: number;
+  old_ease: number;
+  new_ease: number;
+  old_lapses: number;
+  new_lapses: number;
+  old_reps: number;
+  new_reps: number;
+  old_step_index: number | null;
+  new_step_index: number | null;
+  hint_used: boolean;
+  review_time: string;
+};
+
+export type UserRegister = {
+  email: string;
+  username: string;
+  password: string;
+};
+
+export type UserLogin = {
+  email: string;
+  password: string;
+};
+
+export type UserOut = {
+  user_id: number;
+  email: string;
+  username: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TokenResponse = {
+  access_token: string;
+  token_type: "bearer" | string; // default value is "bearer"
 };

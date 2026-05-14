@@ -2007,3 +2007,340 @@ database/anki_demo.db
   - 先把 Python 完整版本做稳
   - 之后挑独立模块、worker 或 service 逐步替换
 - 当前阶段做 Go 的正确方向是“预留替换点”，不是立刻迁移主干
+
+
+
+# 2026-05-14
+
+## 一、Token 存储与常量 `TOKEN_KEY`
+
+### 1. `const TOKEN_KEY = "access_token"` 的作用
+
+- **它只是一个固定的字符串**，作为 `localStorage` 中存储 token 时的**键名（key）**。
+- 不是用来存储多个 token 的容器，也不是与 token 内容比较的值。
+- 目的是避免在代码中到处写死字符串 `"access_token"`，方便统一管理和修改。
+
+### 2. 为什么同一时间只能存一个 token，却能支持多用户？
+
+- `localStorage` 以键值对形式存储数据，同一个键名只能存一个值。
+- 每次新用户登录调用 `saveToken(新token)` 时，会**覆盖**掉旧 token。
+- 所以同一时刻浏览器里只有**当前活跃用户**的 token，这是大部分 Web 应用的默认行为。
+- 如需同时记住多个账号（如账号切换功能），则需要设计额外的存储结构（如多个键名或对象序列化）。
+
+### 3. 为什么不能直接用内存中的对象（字典）存储 token？
+
+- JavaScript 对象存在于**内存 (RAM)** 中。
+- 刷新页面或关闭标签页后，内存被清空，数据丢失。
+- `localStorage` 提供的是**持久化存储**，数据写入硬盘，刷新/关闭后仍能读取。
+
+### 4. `localStorage` 如何实现持久化？
+
+- 浏览器在底层将数据写入用户配置文件目录下的小型数据库（如 SQLite）。
+- `setItem` 写入磁盘，`getItem` 从磁盘读取，因此数据可以跨会话存在。
+
+------
+
+## 二、异步请求与 `fetch`
+
+### 1. 异步（async/await）是什么？
+
+- **同步**：代码一行行执行，任务不完成，后续代码必须等待。
+- **异步**：将耗时任务（如网络请求）挂起，继续执行后续代码，等任务完成再回来处理结果。
+- JavaScript 是**单线程**的，异步通过**事件循环 (Event Loop)** 实现“调换任务顺序”，而不是并行计算。
+- 底层网络请求等 I/O 操作由浏览器的**独立线程池**处理，不阻塞 JS 主线程。
+
+### 2. `fetch` 是什么？和传统 AJAX 的区别
+
+- `fetch` 是浏览器内置的现代 HTTP 请求 API，基于 Promise。
+- 传统 AJAX 多指 `XMLHttpRequest`，使用回调或事件监听。
+- 主要区别：
+  - `fetch` 语法简洁，支持 `async/await`。
+  - `fetch` 仅网络错误才会 reject，HTTP 错误状态码（如 404、500）不会自动 reject，需手动检查 `response.ok`。
+  - `fetch` 不原生支持请求进度，但可通过 `AbortController` 取消请求。
+
+------
+
+## 三、HTTP 请求头 (Headers)
+
+### 1. 请求头是什么？
+
+- HTTP 请求的**元数据**，以键值对形式附加在请求上。
+- 类似于信封上的说明文字，告诉服务器请求的格式、身份、期望的响应类型等。
+
+### 2. 常见请求头字段
+
+- `Content-Type`：请求体的数据格式（如 `application/json`）。
+- `Authorization`：身份认证凭证（如 `Bearer <token>`）。
+- `Accept`：客户端希望接收的响应格式。
+- `Cookie`：携带的 Cookie 信息。
+- 自定义头：如 `X-Requested-With`、`X-API-Key` 等。
+
+### 3. 为什么需要合并 headers？
+
+在你的 `apiRequest` 函数中：
+
+```ts
+const headers: HeadersInit = {
+  "Content-Type": "application/json",
+  ...(options.headers ?? {}),  // 合并调用者传入的自定义头
+};
+if (token) {
+  headers.Authorization = `Bearer ${token}`;
+}
+```
+
+
+
+- 如果不合并 `options.headers`，调用者传入的任何自定义头（如 `X-Custom`）都会**丢失**。
+- 合并后，默认头与自定义头会合并成一个新对象，后面的同名属性可覆盖前面的（例如调用者可覆盖 `Content-Type`）。
+- 这样既提供了默认配置，又保留了调用者的灵活性。
+
+### 4. `HeadersInit` 是什么？
+
+- 它是 **TypeScript 类型**，不是类。
+- 表示可以用于初始化请求头的合法数据格式：
+  - 对象 `{ key: value }`
+  - 二维数组 `[[key, value]]`
+  - `Headers` 对象实例
+- 声明 `const headers: HeadersInit` 只是类型注解，帮助 TS 检查，不执行任何初始化操作。
+
+------
+
+## 四、`apiRequest` 中的展开语法细节
+
+### 1. `...(options.headers ?? {})`
+
+- `options.headers ?? {}`：如果调用者提供了 headers 就用它，否则用空对象。
+- `...` 展开该对象，将其属性一一合并到新 headers 对象中。
+- 结果：`{ "Content-Type": "application/json", ...自定义头 }`
+
+### 2. `...options` 在 fetch 调用中的作用
+
+```ts
+const response = await fetch(`${API_BASE_URL}${path}`, {
+  ...options,  // 保留 method、body 等所有配置
+  headers,     // 用统一处理后的 headers 覆盖 options 中原始的 headers
+});
+```
+
+
+
+- `...options` 将调用者传入的 `method`、`body` 等所有属性原样带入 fetch 配置。
+- 后面单独指定的 `headers` 会**覆盖** `options` 中原有的 `headers`，确保注入的默认头和 token 生效。
+- 这样既保留了调用者的完整配置，又自动注入了认证和默认 Content-Type
+
+## 前端参数判断
+
+拿到一个后端接口，按以下步骤确定前端函数需要哪些参数：
+
+1. **看 HTTP 方法和完整路径**
+   - 包含 `{xxx}` 的片段就是**路径参数**，前端用变量拼接 URL。
+2. **看函数签名里除路径参数、依赖注入外的其它参数**
+   - 如果是 Pydantic / 普通对象参数（如 `payload: DeckUpdate`），就是**请求体**，前端放在 `body` 里，通常 JSON 序列化。
+3. **看查询参数**（`?key=value`）
+   - FastAPI 中未在路径中且无默认依赖的参数，如 `def xxx(q: str = None)`，需要作为 query string 拼在 URL 后或通过 `params` 选项传递。
+4. **忽略由 `Depends` 从 token 或 header 自动提取的参数**（如 `user_id`），前端无需传递。
+
+```py
+@router.patch("/{deck_id}") 
+# {deck_id} 是占位符，它告诉框架：URL 中这一部分是动态的，值会作为参数传给函数
+def update_deck(
+    deck_id: int,                             # 路径参数
+    payload: DeckUpdate,                      # 请求体（JSON）
+    deck_service=Depends(get_deck_service),
+    user_id: int = Depends(get_current_user_id) # 依赖注入，前端无感知
+):
+```
+
+一个 FastAPI 路由里的参数，根据来源可以分为：
+
+| 参数来源       | 如何声明                                                     | 前端如何传递                                                 |
+| :------------- | :----------------------------------------------------------- | :----------------------------------------------------------- |
+| **路径参数**   | 在路由里 `{xxx}`，函数参数同名                               | 拼在 URL 里，如 `/decks/5`                                   |
+| **查询参数**   | 函数参数无默认值且非路径参数，如 `q: str`                    | 在 URL 后 `?q=xxx`                                           |
+| **请求体**     | 参数类型是 Pydantic 模型（如 `payload: DeckUpdate`）         | 放在请求体里，JSON 格式                                      |
+| **依赖注入值** | 使用 `Depends(函数)`，如 `user_id = Depends(get_current_user_id)` | 通常**不需要前端手动传**，由框架从请求头、Cookie 等自动提取并注入 |
+
+**依赖注入**（Dependency Injection）就是：函数**不再自己创建依赖的对象或值，而是由外部“注入”进来**。
+
+在 FastAPI 中，`Depends(...)` 就是声明了一个依赖项。框架会：
+
+1. 调用 `Depends` 里指定的函数（如 `get_current_user_id`）。
+2. 拿到该函数的返回值。
+3. 把返回值赋给参数（如 `user_id`）。
+
+## 依赖注入有什么用？
+
+- **解耦**：业务函数（`update_deck`）不需要知道如何解析 token、如何查数据库，只需要声明“我需要一个 `user_id`”。
+- **可复用**：`get_current_user_id` 可以在所有需要身份校验的路由里复用。
+- **可测试**：测试时可以注入假的依赖，不需要真实 token。
+- **自动获取**：框架自动处理请求数据提取、类型转换、校验。
+
+**FastAPI 的核心作用就是“声明式地定义接口契约”**，而不需要你手动解析 HTTP 请求的细节。
+
+- **路径参数、查询参数、请求体**：你只需在函数参数里声明它们，FastAPI 会自动从 URL、查询字符串、请求体中提取数据，并完成类型校验和转换。
+- **依赖注入**：把“如何从 token 获取 user_id”这类通用逻辑抽离为依赖函数，业务函数只需声明 `user_id = Depends(get_current_user_id)`，无需关心内部实现。
+- **与前端对接**：后端定义好接口契约（路由、参数、响应模型）后，前端只需按照契约调用即可，两端通过 HTTP 通信，最终由服务层（如你代码里的 `deck_service`）执行具体业务逻辑。
+
+因此，开发流程通常是：
+
+1. 定义 Pydantic 模型（请求体、响应体）。
+2. 在路由中声明参数来源（路径/查询/请求体）和依赖项。
+3. 调用服务层方法实现业务，返回结果。
+
+FastAPI 还自动生成 Swagger 文档（`/docs`），前端可以直接看到所有接口的路径、参数和模型，极大减少了沟通成本。
+
+## JSX解释
+
+```tsx
+import { Link, Navigate, Route, Routes } from "react-router-dom";
+import { removeToken } from "./auth/token";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { LoginPage } from "./pages/login";
+import { RegisterPage } from "./pages/register";
+import { DeckListPage } from "./pages/decklist";
+import { CreateNotePage } from "./pages/createnote";
+import { StudyPage } from "./pages/study";
+import "./App.css";
+
+function Layout() {
+  function handleLogout() {
+    removeToken();
+    window.location.href = "/login";
+  }
+
+  return (
+    <div className="app-shell">
+      <header className="app-header">
+        <Link className="brand" to="/decks">
+          Memory Anki Demo
+        </Link>
+
+        <nav className="nav-links">
+          <Link to="/decks">Decks</Link>
+          <Link to="/notes/new">Create Note</Link>
+          <button type="button" className="link-button" onClick={handleLogout}>
+            Logout
+          </button>
+        </nav>
+      </header>
+
+      <main className="app-main">
+        <Routes>
+          <Route path="/decks" element={<DeckListPage />} />
+          <Route path="/notes/new" element={<CreateNotePage />} />
+          <Route path="/study/:deckId" element={<StudyPage />} />
+          <Route path="*" element={<Navigate to="/decks" replace />} />
+        </Routes>
+      </main>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route
+        path="/*"
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  );
+}
+```
+
+### 1. 顶层路由（`App` 组件）
+
+- **`/login`** → 渲染 `LoginPage`，**无需登录**。
+- **`/register`** → 渲染 `RegisterPage`，**无需登录**。
+- **`/\*`** → 匹配所有其他路径，包裹在 `<ProtectedRoute>` 中：
+  - 已登录 → 渲染 `<Layout />`（包含导航栏和子路由）。
+  - 未登录 → 重定向到 `/login`。
+
+### 2. `Layout` 组件（登录后看到的“外壳”）
+
+- **导航栏**：
+  - 品牌名（可点击回首页 `/decks`）。
+  - 导航链接（`/decks`、`/notes/new`）。
+  - 退出登录按钮：清除 token 并跳转 `/login`。
+- **内容区域**（`<main>`）嵌套子路由：
+  - `/decks` → `DeckListPage`
+  - `/notes/new` → `CreateNotePage`
+  - `/study/:deckId` → `StudyPage`（`:deckId` 为动态参数）
+  - 其他不匹配路径 → 重定向到 `/decks`
+
+### 3. 设计意图
+
+- **公开页与受保护页分离**：登录/注册页不经过路由守卫。
+- **布局复用**：所有需要登录的页面共享同一个导航栏。
+- **安全退出**：删除 token 并刷新页面，清空状态。
+- **友好容错**：不存在路径自动跳转到首页。
+
+------
+
+## 二、JSX 语法速查（对照 HTML）
+
+JSX 看起来像 HTML，但它是 JavaScript 语法扩展，最终编译成 JavaScript。下面用对比表格展示关键差异，让你快速上手。
+
+| 场景           | HTML 写法                   | JSX 写法（在 .tsx / .jsx 中）                            | 说明                                                  |
+| :------------- | :-------------------------- | :------------------------------------------------------- | :---------------------------------------------------- |
+| **标签嵌套**   | `<div><p>Hello</p></div>`   | 完全一样                                                 | JSX 支持正常的标签嵌套                                |
+| **CSS 类名**   | `<div class="box">`         | `<div className="box">`                                  | JSX 使用 `className`，因为 `class` 是 JS 保留字       |
+| **元素内样式** | `<div style="color:red">`   | `<div style={{ color:'red' }}>`                          | JSX 用**双花括号**，外层是 JSX 表达式，内层是 JS 对象 |
+| **for 属性**   | `<label for="id">`          | `<label htmlFor="id">`                                   | `for` 是 JS 保留字，改为 `htmlFor`                    |
+| **点击事件**   | `<button onclick="fn()">`   | `<button onClick={fn}>`                                  | JSX 事件名为驼峰命名，值用 `{}` 传函数引用            |
+| **自闭合标签** | `<img src="...">` 或 `<br>` | `<img src="..." />` 或 `<br />`                          | JSX 要求必须闭合，可以写 `<br />` 或 `<br></br>`      |
+| **注释**       | `<!-- 注释 -->`             | `{/* 注释 */}`                                           | JSX 注释需要放在 `{}` 内，并使用 JS 多行注释语法      |
+| **动态内容**   | 模板字符串或 JS 操作 DOM    | `<p>{name}</p>`                                          | `{}` 内写任意 JS 表达式（变量、三元运算、函数调用等） |
+| **渲染列表**   | 手动拼接或框架循环          | `{list.map(item => <li key={item.id}>{item.name}</li>)}` | 直接使用 `map`，需要给每个项添加 `key`                |
+| **条件渲染**   | `v-if` / `ngIf` 等          | `{isShow && <div>content</div>}` 或三元表达式            | JSX 中用逻辑与或三元运算符                            |
+| **组件使用**   | 无此概念                    | `<MyComponent prop1="val" />`                            | 组件名必须**首字母大写**，以区别于原生标签            |
+| **属性传递**   | 固定属性名                  | 可传递任意 JS 值：`<Comp data={obj} />`                  | 非字符串属性必须用 `{}` 包裹                          |
+| **Fragment**   | 无                          | `<React.Fragment>` 或简写 `<></>`                        | 避免多余 DOM 节点，包裹多个子元素                     |
+
+### 核心记忆口诀
+
+1. **长得像 HTML，但不是 HTML** — 它是 React 的 UI 描述语言。
+2. **花括号 `{}` 是 JS 表达式入口** — 凡是要写 JavaScript 的地方都用 `{}`。
+3. **属性名驼峰化** — `class` → `className`，`onclick` → `onClick`，`tabindex` → `tabIndex`。
+4. **组件名首字母必须大写** — 小写会被当成普通 HTML 元素。
+
+这些规则熟练后，就可以像写 HTML 一样自然地编写 React 组件了。
+
+
+
+`Navigate` 和 `useNavigate` 都是 React Router 提供的导航工具，但**形态和使用场景不同**。
+
+- **`<Navigate to="/login" />`** 是一个 **组件**
+  用于在 JSX 中**声明式地重定向**。当它被渲染时，就会立即跳转到目标路径。
+  常用于：条件判断后的页面跳转（比如路由守卫里没登录就跳转）。
+- **`useNavigate()`** 是一个 **Hook**
+  返回一个**函数**，让你在事件处理或逻辑中**手动执行跳转**。
+  常用于：点击按钮、表单提交完成后跳转等需要 JS 控制的场景。
+
+```tsx
+// 1. 组件形式：条件渲染时自动跳转
+if (!isLoggedIn()) {
+  return <Navigate to="/login" />;
+}
+
+// 2. Hook 形式：按钮点击后跳转
+const navigate = useNavigate();
+function handleLogout() {
+  removeToken();
+  navigate("/login");
+}
+```
+
+| 特性         | `<Navigate>`               | `useNavigate`                        |
+| :----------- | :------------------------- | :----------------------------------- |
+| **类型**     | React 组件                 | Hook 返回的函数                      |
+| **使用位置** | JSX 中直接渲染             | 事件处理、副作用等 JavaScript 逻辑里 |
+| **触发方式** | 组件被渲染时就跳转         | 主动调用函数跳转                     |
+| **替换场景** | 类似之前的 `Redirect` 组件 | 类似之前的 `history.push`            |

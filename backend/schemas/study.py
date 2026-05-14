@@ -1,5 +1,6 @@
 from datetime import date
 from pydantic import BaseModel
+from backend.schemas.review import ReviewLogOut
 
 
 class StudySessionStart(BaseModel):
@@ -10,6 +11,11 @@ class StudySessionStart(BaseModel):
 class StudyRating(BaseModel):
     rating: str
 
+class StudyHintOut(BaseModel):
+    hint: str
+
+class StudyBackOut(BaseModel):
+    back: str
 
 class StudySessionStartOut(BaseModel):
     user_id: int
@@ -59,4 +65,9 @@ class StudyNextOut(BaseModel):
     deck_id: int | None = None
     hint_available: bool = False
 
-    
+class StudySessionStatusOut(BaseModel):
+    finished: bool
+
+class StudyRateOut(BaseModel):
+    card: StudyCardOut
+    review_log: ReviewLogOut

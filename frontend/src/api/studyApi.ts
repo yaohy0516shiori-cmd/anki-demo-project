@@ -2,6 +2,8 @@ import { apiRequest } from "./client";
 import type {
   StudySessionStartOut,
   StudyNextOut,
+  StudyRating,
+  StudySessionStatusOut,
   StudyHintOut,
   StudyBackOut,
   StudyRateOut,
@@ -12,6 +14,7 @@ import type {
 // 输出：学习 session 开始后的数据
 export function startStudySession(input: {
   deck_id: number;
+  today: string | null;
 }): Promise<StudySessionStartOut> {
   return apiRequest<StudySessionStartOut>("/study/sessions", {
     method: "POST", //“开始学习 session”不是单纯获取数据，它会在后端创建一个新的学习 session
@@ -25,7 +28,7 @@ export function startStudySession(input: {
 export function getNextCard(input: {
   session_id: string;
 }): Promise<StudyNextOut> {
-  return apiRequest<StudyNextOut>("/study/sessions/${session_id}/next", {
+  return apiRequest<StudyNextOut>(`/study/sessions/${input.session_id}/next`, {
     method: "GET",
     body: JSON.stringify(input),
   });
@@ -35,8 +38,8 @@ export function getNextCard(input: {
 // 输入：session id
 // 输出：hint
 export function getHint(input: { session_id: string }): Promise<StudyHintOut> {
-  return apiRequest<StudyHintOut>("/study/sessions/${session_id}/hint", {
-    method: "GET",
+  return apiRequest<StudyHintOut>(`/study/sessions/${input.session_id}/hint`, {
+    method: "POST",
     body: JSON.stringify(input),
   });
 }
@@ -45,9 +48,9 @@ export function getHint(input: { session_id: string }): Promise<StudyHintOut> {
 // 输入：session id
 // 输出：back
 export function getBack(input: { session_id: string }): Promise<StudyBackOut> {
-  return apiRequest<StudyBackOut>("/study/sessions/${session_id}/back", {
+  return apiRequest<StudyBackOut>(`/study/sessions/${input.session_id}/back`, {
     // ${session_id} 是变量，需要用反引号括起来
-    method: "GET",
+    method: "POST",
     body: JSON.stringify(input),
   });
 }
@@ -57,10 +60,22 @@ export function getBack(input: { session_id: string }): Promise<StudyBackOut> {
 // 输出：评分后的数据
 export function rateCard(input: {
   session_id: string;
-  rating: string;
+  rating: StudyRating;
 }): Promise<StudyRateOut> {
-  return apiRequest<StudyRateOut>("/study/sessions/${session_id}/rate", {
-    method: "POST", // POST请求，请求体是JSON
-    body: JSON.stringify(input), // 把输入转换成JSON字符串
+  return apiRequest<StudyRateOut>(`/study/sessions/${input.session_id}/rate`, {
+    method: "POST",
+    body: JSON.stringify({ rating: input.rating }),
   });
+}
+
+export function getSessionStatus(input: {
+  session_id: string;
+}): Promise<StudySessionStatusOut> {
+  return apiRequest<StudySessionStatusOut>(
+    `/study/sessions/${input.session_id}/status`,
+    {
+      method: "GET",
+      body: JSON.stringify(input),
+    },
+  );
 }

@@ -9,7 +9,7 @@ export function createNote(input: {
   fields: string[];
   tags: string[];
   hint: string;
-  deck_id: number;
+  deck_id: number | null;
 }): Promise<NoteOut> {
   return apiRequest<NoteOut>("/notes", {
     method: "POST", // POST请求，请求体是JSON
@@ -20,6 +20,26 @@ export function createNote(input: {
 // get note list
 // 输入：无
 // 输出：note列表
-export function getNoteList(): Promise<NoteOut[]> {
+export function listNotes(): Promise<NoteOut[]> {
   return apiRequest<NoteOut[]>("/notes");
+}
+
+export function getNote(note_id: number): Promise<NoteOut> {
+  return apiRequest<NoteOut>(`/notes/${note_id}`);
+}
+
+export function updateNote(
+  note_id: number,
+  data: { fields: string[]; tags: string[]; hint: string },
+): Promise<NoteOut> {
+  return apiRequest<NoteOut>(`/notes/${note_id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteNote(note_id: number): Promise<void> {
+  return apiRequest(`/notes/${note_id}`, {
+    method: "DELETE",
+  });
 }
