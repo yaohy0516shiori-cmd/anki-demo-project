@@ -25,57 +25,51 @@ export function startStudySession(input: {
 // get next card
 // 输入：session id
 // 输出：下一张卡的数据
-export function getNextCard(input: {
-  session_id: string;
-}): Promise<StudyNextOut> {
-  return apiRequest<StudyNextOut>(`/study/sessions/${input.session_id}/next`, {
+export function getNextCard(session_id: string): Promise<StudyNextOut> {
+  return apiRequest<StudyNextOut>(`/study/sessions/${session_id}/next`, {
     method: "GET",
-    body: JSON.stringify(input),
   });
 }
 
 // get hint
 // 输入：session id
 // 输出：hint
-export function getHint(input: { session_id: string }): Promise<StudyHintOut> {
-  return apiRequest<StudyHintOut>(`/study/sessions/${input.session_id}/hint`, {
+export function revealHint(session_id: string): Promise<StudyHintOut> {
+  return apiRequest<StudyHintOut>(`/study/sessions/${session_id}/hint`, {
     method: "POST",
-    body: JSON.stringify(input),
   });
 }
 
 // get back
 // 输入：session id
 // 输出：back
-export function getBack(input: { session_id: string }): Promise<StudyBackOut> {
-  return apiRequest<StudyBackOut>(`/study/sessions/${input.session_id}/back`, {
+export function revealBack(session_id: string): Promise<StudyBackOut> {
+  return apiRequest<StudyBackOut>(`/study/sessions/${session_id}/back`, {
     // ${session_id} 是变量，需要用反引号括起来
     method: "POST",
-    body: JSON.stringify(input),
   });
 }
 
 // rate card
 // 输入：session id、评分
 // 输出：评分后的数据
-export function rateCard(input: {
-  session_id: string;
-  rating: StudyRating;
-}): Promise<StudyRateOut> {
-  return apiRequest<StudyRateOut>(`/study/sessions/${input.session_id}/rate`, {
+export function rateCard(
+  session_id: string,
+  rating: StudyRating,
+): Promise<StudyRateOut> {
+  return apiRequest<StudyRateOut>(`/study/sessions/${session_id}/rate`, {
     method: "POST",
-    body: JSON.stringify({ rating: input.rating }),
+    body: JSON.stringify({ rating }),
   });
 }
 
-export function getSessionStatus(input: {
-  session_id: string;
-}): Promise<StudySessionStatusOut> {
+export function getSessionStatus(
+  session_id: string,
+): Promise<StudySessionStatusOut> {
   return apiRequest<StudySessionStatusOut>(
-    `/study/sessions/${input.session_id}/status`,
+    `/study/sessions/${session_id}/status`,
     {
       method: "GET",
-      body: JSON.stringify(input),
     },
   );
 }

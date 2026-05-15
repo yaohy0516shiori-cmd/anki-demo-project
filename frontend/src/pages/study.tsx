@@ -3,8 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import {
   getNextCard,
   rateCard,
-  getBack,
-  getHint,
+  revealBack,
+  revealHint,
   startStudySession,
 } from "../api/studyApi";
 import type {
@@ -46,9 +46,7 @@ export function StudyPage() {
 
         setSession(createdSession);
 
-        const next = await getNextCard({
-          session_id: createdSession.session_id,
-        });
+        const next = await getNextCard(createdSession.session_id);
         setCurrent(next);
       } catch (err) {
         setError(
@@ -69,7 +67,7 @@ export function StudyPage() {
     setActionLoading(true);
 
     try {
-      const data = await getHint({ session_id: session.session_id });
+      const data = await revealHint(session.session_id);
       setHint(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to get hint");
@@ -85,7 +83,7 @@ export function StudyPage() {
     setActionLoading(true);
 
     try {
-      const data = await getBack({ session_id: session.session_id });
+      const data = await revealBack(session.session_id);
       setBack(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to get back");
@@ -101,12 +99,12 @@ export function StudyPage() {
     setActionLoading(true);
 
     try {
-      await rateCard({ session_id: session.session_id, rating });
+      await rateCard(session.session_id, rating);
 
       setHint(null);
       setBack(null);
 
-      const next = await getNextCard({ session_id: session.session_id });
+      const next = await getNextCard(session.session_id);
       setCurrent(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to rate card");
