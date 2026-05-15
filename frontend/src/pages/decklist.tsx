@@ -1,7 +1,12 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { createDeck, getDeckList } from "../api/deckApi";
+import {
+  createDeck,
+  getDeckList,
+  deleteDeck,
+  updateDeck,
+} from "../api/deckApi";
 import type { DeckOut } from "../types/api";
 
 export function DeckListPage() {
@@ -11,23 +16,39 @@ export function DeckListPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-
-  async function loadDecks() {
-    setError(null);
-    setLoading(true);
-
-    try {
-      const data = await getDeckList();
-      setDecks(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load decks");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [editingDeckId, setEditingDeckId] = useState<number | null>(null);
+  const [editDeckName, setEditDeckName] = useState("");
+  const [editDeckDescription, setEditDeckDescription] = useState("");
+  const [updatingDeckId, setUpdatingDeckId] = useState<number | null>(null);
+  const [deletingDeckId, setDeletingDeckId] = useState<number | null>(null);
 
   useEffect(() => {
-    void loadDecks();
+    let cancelled = false;
+
+    async function loadDecksOnMount() {
+      try {
+        const data = await getDeckList();
+
+        if (!cancelled) {
+          setDecks(data);
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load decks");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadDecksOnMount();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function handleCreateDeck(event: FormEvent<HTMLFormElement>) {
@@ -57,6 +78,76 @@ export function DeckListPage() {
     }
   }
 
+  function handleStartEditDeck(deck: DeckOut) {
+    setEditingDeckId(deck.deck_id);
+    setEditDeckName(deck.deck_name);
+    setEditDeckDescription(deck.deck_description);
+    setError(null);
+  }
+
+  function handleCancelEditDeck() {
+    setEditingDeckId(null);
+    setEditDeckName("");
+    setEditDeckDescription("");
+  }
+
+  async function handleSaveDeck(deckId: number) {
+    if (!editDeckName.trim()) {
+      setError("Deck name is required");
+      return;
+    }
+
+    setError(null);
+    setUpdatingDeckId(deckId);
+
+    try {
+      const updated = await updateDeck(deckId, {
+        deck_name: editDeckName.trim(),
+        deck_description: editDeckDescription.trim(),
+      });
+
+      setDecks((current) =>
+        current.map((deck) => (deck.deck_id === deckId ? updated : deck)),
+      );
+
+      handleCancelEditDeck();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update deck");
+    } finally {
+      setUpdatingDeckId(null);
+    }
+  }
+
+  async function handleDeleteDeck(deck: DeckOut) {
+    if (deck.is_default) {
+      setError("Default deck cannot be deleted");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete deck "${deck.deck_name}"? Its cards will be moved to the default deck.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError(null);
+    setDeletingDeckId(deck.deck_id);
+
+    try {
+      await deleteDeck(deck.deck_id, false);
+
+      setDecks((current) =>
+        current.filter((currentDeck) => currentDeck.deck_id !== deck.deck_id),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete deck");
+    } finally {
+      setDeletingDeckId(null);
+    }
+  }
+
   return (
     <div className="page-grid">
       <section className="card">
@@ -72,6 +163,26 @@ export function DeckListPage() {
         <div className="deck-list">
           {decks.map((deck) => (
             <article className="deck-item" key={deck.deck_id}>
+            {editingDeckId === deck.deck_id ? (
+              <div className="inline-edit">
+                <label>
+                  Deck name
+                  <input
+                    value={editDeckName}
+                    onChange={(event) => setEditDeckName(event.target.value)}
+                  />
+                </label>
+          
+                <label>
+                  Description
+                  <textarea
+                    value={editDeckDescription}
+                    onChange={(event) => setEditDeckDescription(event.target.value)}
+                    rows={3}
+                  />
+                </label>
+              </div>
+            ) : (
               <div>
                 <h2>{deck.deck_name}</h2>
                 <p className="muted">
@@ -79,22 +190,75 @@ export function DeckListPage() {
                   {deck.is_default ? " · default deck" : ""}
                 </p>
               </div>
-
-              <div className="row-actions">
-                <Link
-                  className="button-secondary"
-                  to={`/notes/new?deck_id=${deck.deck_id}`}
-                >
-                  Add note
-                </Link>
-                <Link
-                  className="button-secondary"
-                  to={`/study/${deck.deck_id}`}
-                >
-                  Study
-                </Link>
-              </div>
-            </article>
+            )}
+          
+            <div className="row-actions">
+              {editingDeckId === deck.deck_id ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveDeck(deck.deck_id)}
+                    disabled={updatingDeckId === deck.deck_id}
+                  >
+                    {updatingDeckId === deck.deck_id ? "Saving..." : "Save"}
+                  </button>
+          
+                  <button
+                    className="button-secondary"
+                    type="button"
+                    onClick={handleCancelEditDeck}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    className="button-secondary"
+                    to={`/notes/new?deck_id=${deck.deck_id}`}
+                  >
+                    Add note
+                  </Link>
+          
+                  <Link
+                    className="button-secondary"
+                    to={`/decks/${deck.deck_id}/cards`}
+                  >
+                    View cards
+                  </Link>
+          
+                  <Link
+                    className="button-secondary"
+                    to={`/study/${deck.deck_id}`}
+                  >
+                    Study
+                  </Link>
+          
+                  <button
+                    className="button-secondary"
+                    type="button"
+                    onClick={() => handleStartEditDeck(deck)}
+                  >
+                    Edit
+                  </button>
+          
+                  <button
+                    className="danger-button"
+                    type="button"
+                    disabled={deck.is_default || deletingDeckId === deck.deck_id}
+                    onClick={() => void handleDeleteDeck(deck)}
+                    title={
+                      deck.is_default
+                        ? "Default deck cannot be deleted"
+                        : "Delete deck"
+                    }
+                  >
+                    {deletingDeckId === deck.deck_id ? "Deleting..." : "Delete"}
+                  </button>
+                </>
+              )}
+            </div>
+          </article>
           ))}
         </div>
       </section>

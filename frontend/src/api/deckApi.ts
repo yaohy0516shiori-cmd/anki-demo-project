@@ -1,5 +1,5 @@
 import { apiRequest } from "./client";
-import type { DeckOut, StudyCardOut } from "../types/api";
+import type { DeckOut, DeleteResultOut, StudyCardOut } from "../types/api";
 
 // get deck list
 // 输入：无
@@ -34,8 +34,8 @@ export function updateDeck(
 export function deleteDeck(
   deck_id: number,
   hard: boolean = false,
-): Promise<void> {
-  return apiRequest(`/decks/${deck_id}?hard=${hard}`, {
+): Promise<DeleteResultOut> {
+  return apiRequest<DeleteResultOut>(`/decks/${deck_id}?hard=${hard}`, {
     method: "DELETE",
   });
 }

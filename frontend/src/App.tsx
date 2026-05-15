@@ -1,4 +1,4 @@
-import { Link, Navigate, Route, Routes } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { removeToken } from "./auth/token";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LoginPage } from "./pages/login";
@@ -7,6 +7,7 @@ import { DeckListPage } from "./pages/decklist";
 import { CreateNotePage } from "./pages/createnote";
 import { StudyPage } from "./pages/study";
 import "./App.css";
+import { CardListPage } from "./pages/cardlist";
 /*
 Layout 组件是应用的布局组件，包含导航和应用主体。
 1. 导航栏
@@ -21,9 +22,13 @@ Layout 组件是应用的布局组件，包含导航和应用主体。
 * → 如果以上都不匹配（比如用户随便输入一个路径），重定向到 /decks，避免出现空白页。
 */
 function Layout() {
+  const navigate = useNavigate();
   function handleLogout() {
+    //     removeToken()：清除 localStorage 里的 JWT
+    // navigate("/login")：回到登录页
+    // replace: true：用户不能用浏览器返回键回到登录后的页面
     removeToken();
-    window.location.href = "/login";
+    navigate("/login", { replace: true });
   }
 
   return (
@@ -48,6 +53,7 @@ function Layout() {
           <Route path="/notes/new" element={<CreateNotePage />} />
           <Route path="/study/:deckId" element={<StudyPage />} />
           <Route path="*" element={<Navigate to="/decks" replace />} />
+          <Route path="/decks/:deckId/cards" element={<CardListPage />} />
         </Routes>
       </main>
     </div>

@@ -2,7 +2,7 @@ import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { getDeckList } from "../api/deckApi";
-import { createNote, listNotes } from "../api/noteApi";
+import { createNote, listNotes, deleteNote, updateNote } from "../api/noteApi";
 import type { DeckOut, NoteOut } from "../types/api";
 
 const NOTE_TYPES = [
@@ -33,7 +33,13 @@ export function CreateNotePage() {
     () => NOTE_TYPES.find((item) => item.id === noteTypeId) ?? NOTE_TYPES[0],
     [noteTypeId],
   );
-
+  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+  const [editFront, setEditFront] = useState("");
+  const [editBack, setEditBack] = useState("");
+  const [editHint, setEditHint] = useState("");
+  const [editTagsText, setEditTagsText] = useState("");
+  const [updatingNoteId, setUpdatingNoteId] = useState<number | null>(null);
+  const [deletingNoteId, setDeletingNoteId] = useState<number | null>(null);
   useEffect(() => {
     async function loadInitialData() {
       try {
@@ -105,7 +111,88 @@ export function CreateNotePage() {
       setLoading(false);
     }
   }
+  function handleStartEditNote(note: NoteOut) {
+    setEditingNoteId(note.note_id);
+    setEditFront(note.fields[0] ?? "");
+    setEditBack(note.fields[1] ?? "");
+    setEditHint(note.hint);
+    setEditTagsText(note.tags.join(", "));
+    setError(null);
+    setSuccess(null);
+  }
 
+  function handleCancelEditNote() {
+    setEditingNoteId(null);
+    setEditFront("");
+    setEditBack("");
+    setEditHint("");
+    setEditTagsText("");
+  }
+
+  async function handleSaveNote(noteId: number) {
+    if (!editFront.trim() || !editBack.trim()) {
+      setError("Both fields are required");
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setUpdatingNoteId(noteId);
+
+    try {
+      const tags = editTagsText
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+
+      const updated = await updateNote(noteId, {
+        fields: [editFront.trim(), editBack.trim()],
+        tags,
+        hint: editHint.trim(),
+      });
+
+      setNotes((current) =>
+        current.map((note) => (note.note_id === noteId ? updated : note)),
+      );
+
+      handleCancelEditNote();
+      setSuccess(
+        `Updated note #${noteId}. Related cards were reconciled by backend.`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update note");
+    } finally {
+      setUpdatingNoteId(null);
+    }
+  }
+
+  async function handleDeleteNote(note: NoteOut) {
+    const confirmed = window.confirm(
+      `Delete note #${note.note_id}? Its generated cards will also be deleted.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setDeletingNoteId(note.note_id);
+
+    try {
+      await deleteNote(note.note_id);
+
+      setNotes((current) =>
+        current.filter((currentNote) => currentNote.note_id !== note.note_id),
+      );
+
+      setSuccess(`Deleted note #${note.note_id} and its related cards.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete note");
+    } finally {
+      setDeletingNoteId(null);
+    }
+  }
   return (
     <div className="page-grid">
       <section className="card">
@@ -202,8 +289,89 @@ export function CreateNotePage() {
         <div className="note-list">
           {notes.slice(0, 8).map((note) => (
             <article className="note-item" key={note.note_id}>
-              <strong>#{note.note_id}</strong>
-              <span>{note.fields.join(" / ")}</span>
+              {editingNoteId === note.note_id ? (
+                <div className="inline-edit">
+                  <strong>Editing note #{note.note_id}</strong>
+
+                  <label>
+                    Front
+                    <textarea
+                      value={editFront}
+                      onChange={(event) => setEditFront(event.target.value)}
+                      rows={3}
+                    />
+                  </label>
+
+                  <label>
+                    Back
+                    <textarea
+                      value={editBack}
+                      onChange={(event) => setEditBack(event.target.value)}
+                      rows={3}
+                    />
+                  </label>
+
+                  <label>
+                    Hint
+                    <input
+                      value={editHint}
+                      onChange={(event) => setEditHint(event.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    Tags
+                    <input
+                      value={editTagsText}
+                      onChange={(event) => setEditTagsText(event.target.value)}
+                    />
+                  </label>
+
+                  <div className="row-actions">
+                    <button
+                      type="button"
+                      onClick={() => void handleSaveNote(note.note_id)}
+                      disabled={updatingNoteId === note.note_id}
+                    >
+                      {updatingNoteId === note.note_id ? "Saving..." : "Save"}
+                    </button>
+
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={handleCancelEditNote}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <strong>#{note.note_id}</strong>
+                  <span>{note.fields.join(" / ")}</span>
+
+                  <div className="row-actions">
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => handleStartEditNote(note)}
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      className="danger-button"
+                      type="button"
+                      disabled={deletingNoteId === note.note_id}
+                      onClick={() => void handleDeleteNote(note)}
+                    >
+                      {deletingNoteId === note.note_id
+                        ? "Deleting..."
+                        : "Delete"}
+                    </button>
+                  </div>
+                </>
+              )}
             </article>
           ))}
         </div>

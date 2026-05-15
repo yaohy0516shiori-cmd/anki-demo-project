@@ -53,6 +53,18 @@ export type StudyNoteOut = {
   updated_at: string;
 };
 
+export type DeleteResultOut = {
+  message: string;
+  deleted_deck_id?: number;
+  deleted_deck_name?: string;
+  deleted_deck_count?: number;
+  moved_card_count?: number;
+  target_deck_id?: number;
+  deleted_card_count?: number;
+  note_id?: number;
+  deleted_note_count?: number;
+};
+
 export type StudyNextOut = {
   finished: boolean;
   user_id: number;

@@ -19,7 +19,12 @@ class DeckService:
             return self.__repository_deck.create_deck(deck)
     
     def get_deck(self, user_id:int, deck_id:int):
-        return self.__repository_deck.get_deck(user_id, deck_id)
+        deck = self.__repository_deck.get_deck(user_id, deck_id)
+        if deck is None:
+            raise ValueError("Deck not found")
+        if deck.user_id != user_id:
+            raise ValueError("Deck does not belong to this user")
+        return deck
     
     def update_deck(self, user_id:int, deck:Deck):
         with self.__transaction():
@@ -86,6 +91,7 @@ class DeckService:
         return self.__repository_deck.get_all_decks_ids(user_id)
     
     def get_cards_by_deck_id(self, user_id:int, deck_id:int):
+        self.get_deck(user_id, deck_id)
         return self.__card_service.get_cards_by_deck_id(user_id, deck_id)
     
     def move_cards_to_deck(self, user_id:int, from_deck_id:int, to_deck_id:int):

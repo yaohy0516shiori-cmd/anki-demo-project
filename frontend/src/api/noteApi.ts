@@ -1,5 +1,5 @@
 import { apiRequest } from "./client";
-import type { NoteOut } from "../types/api";
+import type { DeleteResultOut, NoteOut } from "../types/api";
 
 // create note
 // 输入：note类型、note字段、note标签、note提示
@@ -38,8 +38,8 @@ export function updateNote(
   });
 }
 
-export function deleteNote(note_id: number): Promise<void> {
-  return apiRequest(`/notes/${note_id}`, {
+export function deleteNote(note_id: number): Promise<DeleteResultOut> {
+  return apiRequest<DeleteResultOut>(`/notes/${note_id}`, {
     method: "DELETE",
   });
 }
