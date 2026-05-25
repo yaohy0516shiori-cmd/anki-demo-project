@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { loginUser, registerUser, sendRegisterCode } from "../api/authApi";
 import { saveToken } from "../auth/token";
@@ -14,15 +14,57 @@ export function RegisterPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const CODE_TTL_MS = 5 * 60 * 1000;
+  const RESEND_COOLDOWN_MS = 60 * 1000;
+  const [resendAvailableAt, setResendAvailableAt] = useState<number | null>(
+    null,
+  );
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  const codeSecondsLeft =
+    codeExpiresAt === null
+      ? 0
+      : Math.max(0, Math.ceil((codeExpiresAt - now) / 1000));
+
+  const resendSecondsLeft =
+    resendAvailableAt === null
+      ? 0
+      : Math.max(0, Math.ceil((resendAvailableAt - now) / 1000));
+
+  const canSendCode = email.trim().length > 0 && resendSecondsLeft === 0;
 
   async function handleSendCode() {
     setError(null);
 
+    if (!email.trim()) {
+      setError("Please enter your email first.");
+      return;
+    }
+
+    if (resendSecondsLeft > 0) {
+      setError(
+        `Please wait ${resendSecondsLeft}s before sending another code.`,
+      );
+      return;
+    }
+
     try {
       const result = await sendRegisterCode({ email });
+
       setDevCode(result.dev_code);
       setVerificationCode(result.dev_code);
-      setCodeExpiresAt(Date.now() + 5 * 60 * 1000);
+      setCodeExpiresAt(Date.now() + CODE_TTL_MS);
+      setResendAvailableAt(Date.now() + RESEND_COOLDOWN_MS);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send code");
     }
@@ -73,8 +115,36 @@ export function RegisterPage() {
               autoComplete="email"
               required
             />
+            <button
+              type="button"
+              className="button-secondary"
+              onClick={() => void handleSendCode()}
+              disabled={!canSendCode}
+            >
+              {resendSecondsLeft > 0
+                ? `Send again in ${resendSecondsLeft}s`
+                : "Send verification code"}
+            </button>
+          </label>
+          <label>
+            Verification code
+            <input
+              value={verificationCode}
+              onChange={(event) => setVerificationCode(event.target.value)}
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="6-digit code"
+              required
+            />
           </label>
 
+          {devCode && (
+            <p className="muted">
+              DEV verification code: <strong>{devCode}</strong>. Expires in{" "}
+              {codeSecondsLeft}s.
+            </p>
+          )}
           <label>
             Username
             <input

@@ -64,8 +64,10 @@ export function resetPassword(
   });
 }
 
-export function sendForgetCode(input: EmailCodeRequest): Promise<MessageOut> {
-  return apiRequest<MessageOut>("/users/password/forgot/send-code", {
+export function sendPasswordResetCode(
+  input: EmailCodeRequest,
+): Promise<DevEmailCodeOut> {
+  return apiRequest<DevEmailCodeOut>("/users/password/forgot/send-code", {
     method: "POST",
     body: JSON.stringify(input),
   });

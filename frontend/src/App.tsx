@@ -9,6 +9,8 @@ import { StudyPage } from "./pages/study";
 import "./App.css";
 import { CardListPage } from "./pages/cardlist";
 import { ReviewLogsPage } from "./pages/reviewlogs";
+import { ForgotPasswordPage } from "./pages/forgetpassword";
+import { UpdatePasswordPage } from "./pages/updatepassword";
 /*
 Layout 组件是应用的布局组件，包含导航和应用主体。
 1. 导航栏
@@ -58,11 +60,7 @@ function Layout() {
           <Route path="*" element={<Navigate to="/decks" replace />} />
           <Route path="/decks/:deckId/cards" element={<CardListPage />} />
           <Route path="/reviewlogs" element={<ReviewLogsPage />} />
-          <Route
-            path="/password/forgot/send-code"
-            element={<ForgotPasswordPage />}
-          />
-          <Route path="/password/reset" element={<ResetPasswordPage />} />
+          <Route path="/settings/password" element={<UpdatePasswordPage />} />
         </Routes>
       </main>
     </div>
@@ -81,6 +79,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route
         path="/*"
         element={

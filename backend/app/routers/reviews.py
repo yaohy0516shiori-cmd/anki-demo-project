@@ -72,5 +72,5 @@ def list_latest_note_reviews(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/notes/{note_id}", response_model=LatestNoteReviewOut)
-def get_latest_note_review(note_id: int, review_service=Depends(get_review_service), user_id: int = Depends(get_current_user_id)):
+def get_latest_note_reviews(note_id: int, review_service=Depends(get_review_service), user_id: int = Depends(get_current_user_id)):
     return review_service.get_latest_note_reviews(user_id, note_id)

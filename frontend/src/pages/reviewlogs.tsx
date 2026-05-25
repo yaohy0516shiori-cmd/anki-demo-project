@@ -1,25 +1,10 @@
 // frontend/src/pages/reviewlogs.tsx
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getDeckList } from "../api/deckApi";
-import { listReviewLogs } from "../api/reviewApi";
-import type { DeckOut, ReviewLogOut, LatestNoteReviewOut } from "../types/api";
-
-const UNKNOWN_DECK_KEY = "unknown";
-
-type ReviewDeckGroup = {
-  key: string;
-  deckId: number | null;
-  deckName: string;
-  deckDescription: string;
-  logs: ReviewLogOut[];
-  total: number;
-  good: number;
-  again: number;
-  hintUsed: number;
-  latestReviewTime: string | null;
-};
+import { listLatestNoteReviewsByDeck } from "../api/reviewApi";
+import type { DeckOut, LatestNoteReviewOut } from "../types/api";
 
 function formatDateTime(value: string | null): string {
   if (!value) return "-";
@@ -30,40 +15,6 @@ function formatDateTime(value: string | null): string {
   }
 
   return date.toLocaleString();
-}
-
-function formatDue(value: string | null): string {
-  return value || "-";
-}
-
-function getDeckKey(deckId: number | null): string {
-  return deckId === null ? UNKNOWN_DECK_KEY : String(deckId);
-}
-
-function getDeckLabel(
-  deckId: number | null,
-  deckMap: Map<number, DeckOut>,
-): string {
-  if (deckId === null) {
-    return "Deleted or unknown deck";
-  }
-
-  return deckMap.get(deckId)?.deck_name ?? `Deck #${deckId}`;
-}
-
-function getDeckDescription(
-  deckId: number | null,
-  deckMap: Map<number, DeckOut>,
-): string {
-  if (deckId === null) {
-    return "The original deck was deleted, or this log no longer points to a deck.";
-  }
-
-  return deckMap.get(deckId)?.deck_description || "No description";
-}
-
-function compareReviewTimeDesc(a: ReviewLogOut, b: ReviewLogOut): number {
-  return new Date(b.review_time).getTime() - new Date(a.review_time).getTime();
 }
 
 export function ReviewLogsPage() {
@@ -77,6 +28,7 @@ export function ReviewLogsPage() {
   const [loadingDecks, setLoadingDecks] = useState(true);
   const [loadingDeckId, setLoadingDeckId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -108,78 +60,50 @@ export function ReviewLogsPage() {
     };
   }, []);
 
-  const deckGroups = useMemo<ReviewDeckGroup[]>(() => {
-    const deckMap = new Map(decks.map((deck) => [deck.deck_id, deck]));
-    const grouped = new Map<string, ReviewLogOut[]>();
+  async function toggleDeck(deckId: number) {
+    const alreadyExpanded = expandedDeckIds.has(deckId);
 
-    for (const log of logs) {
-      const key = getDeckKey(log.deck_id);
-      const currentLogs = grouped.get(key) ?? [];
-      currentLogs.push(log);
-      grouped.set(key, currentLogs);
-    }
-
-    return Array.from(grouped.entries())
-      .map(([key, groupLogs]) => {
-        const sortedLogs = [...groupLogs].sort(compareReviewTimeDesc);
-        const firstLog = sortedLogs[0];
-        const deckId = firstLog?.deck_id ?? null;
-
-        return {
-          key,
-          deckId,
-          deckName: getDeckLabel(deckId, deckMap),
-          deckDescription: getDeckDescription(deckId, deckMap),
-          logs: sortedLogs,
-          total: sortedLogs.length,
-          good: sortedLogs.filter((log) => log.rating === "good").length,
-          again: sortedLogs.filter((log) => log.rating === "again").length,
-          hintUsed: sortedLogs.filter((log) => log.hint_used).length,
-          latestReviewTime: firstLog?.review_time ?? null,
-        };
-      })
-      .sort((a, b) => {
-        const timeA = a.latestReviewTime
-          ? new Date(a.latestReviewTime).getTime()
-          : 0;
-        const timeB = b.latestReviewTime
-          ? new Date(b.latestReviewTime).getTime()
-          : 0;
-
-        return timeB - timeA;
-      });
-  }, [decks, logs]);
-
-  const summary = useMemo(() => {
-    const total = logs.length;
-    const good = logs.filter((log) => log.rating === "good").length;
-    const again = logs.filter((log) => log.rating === "again").length;
-    const reviewedDecks = deckGroups.length;
-
-    return { total, good, again, reviewedDecks };
-  }, [deckGroups.length, logs]);
-
-  function toggleDeck(key: string) {
-    setExpandedDeckKeys((current) => {
+    setExpandedDeckIds((current) => {
       const next = new Set(current);
 
-      if (next.has(key)) {
-        next.delete(key);
+      if (alreadyExpanded) {
+        next.delete(deckId);
       } else {
-        next.add(key);
+        next.add(deckId);
       }
 
       return next;
     });
+
+    if (alreadyExpanded) {
+      return;
+    }
+
+    setLoadingDeckId(deckId);
+    setError(null);
+
+    try {
+      const reviews = await listLatestNoteReviewsByDeck(deckId);
+
+      setNoteReviewsByDeckId((current) => ({
+        ...current,
+        [deckId]: reviews,
+      }));
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load note reviews",
+      );
+    } finally {
+      setLoadingDeckId(null);
+    }
   }
 
   return (
     <section className="card">
       <h1>Review Logs</h1>
       <p className="muted">
-        Review logs are read-only history records. This page first shows decks
-        that have been reviewed, then you can expand one deck to inspect its
-        review records.
+        All decks are shown here. Expand a deck to view the latest review status
+        for each note in that deck.
       </p>
 
       <div className="row-actions">
@@ -192,63 +116,38 @@ export function ReviewLogsPage() {
         </Link>
       </div>
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <strong>{summary.reviewedDecks}</strong>
-          <span>Reviewed decks</span>
-        </div>
-
-        <div className="stat-card">
-          <strong>{summary.total}</strong>
-          <span>Total reviews</span>
-        </div>
-
-        <div className="stat-card">
-          <strong>{summary.good}</strong>
-          <span>Good</span>
-        </div>
-
-        <div className="stat-card">
-          <strong>{summary.again}</strong>
-          <span>Again</span>
-        </div>
-      </div>
-
-      {loading && <p>Loading review logs...</p>}
+      {loadingDecks && <p>Loading decks...</p>}
 
       {error && <p className="error">{error}</p>}
 
-      {!loading && !error && deckGroups.length === 0 && (
-        <p className="muted">
-          No reviewed decks yet. Start a study session and rate a card first.
-        </p>
+      {!loadingDecks && !error && decks.length === 0 && (
+        <p className="muted">No decks yet. Create a deck or note first.</p>
       )}
 
-      {!loading && !error && deckGroups.length > 0 && (
+      {!loadingDecks && decks.length > 0 && (
         <div className="review-deck-list">
-          {deckGroups.map((group) => {
-            const expanded = expandedDeckKeys.has(group.key);
+          {decks.map((deck) => {
+            const expanded = expandedDeckIds.has(deck.deck_id);
+            const noteReviews = noteReviewsByDeckId[deck.deck_id] ?? [];
+            const isLoadingThisDeck = loadingDeckId === deck.deck_id;
 
             return (
-              <article className="review-deck-card" key={group.key}>
+              <article className="review-deck-card" key={deck.deck_id}>
                 <button
                   type="button"
                   className="review-deck-header"
-                  onClick={() => toggleDeck(group.key)}
+                  onClick={() => void toggleDeck(deck.deck_id)}
                   aria-expanded={expanded}
                 >
                   <div className="review-deck-main">
-                    <h2>{group.deckName}</h2>
-                    <p className="muted">{group.deckDescription}</p>
+                    <h2>{deck.deck_name}</h2>
+                    <p className="muted">
+                      {deck.deck_description || "No description"}
+                    </p>
                   </div>
 
                   <div className="review-deck-meta">
-                    <span>{group.total} reviews</span>
-                    <span>{group.good} good</span>
-                    <span>{group.again} again</span>
-                    <span>
-                      Latest: {formatDateTime(group.latestReviewTime)}
-                    </span>
+                    <span>Updated: {formatDateTime(deck.updated_at)}</span>
                     <strong>{expanded ? "Collapse" : "Expand"}</strong>
                   </div>
                 </button>
@@ -256,41 +155,45 @@ export function ReviewLogsPage() {
                 {expanded && (
                   <div className="review-deck-body">
                     <div className="row-actions">
-                      {group.deckId !== null && (
-                        <Link
-                          className="button-secondary"
-                          to={`/decks/${group.deckId}/cards`}
-                        >
-                          View cards
-                        </Link>
-                      )}
+                      <Link
+                        className="button-secondary"
+                        to={`/decks/${deck.deck_id}/cards`}
+                      >
+                        View cards
+                      </Link>
                     </div>
 
-                    <div className="table-wrapper">
-                      <table className="data-table">
-                        <thead>
-                          <tr>
-                            <th>Note</th>
-                            <th>Time</th>
-                            <th>Status</th>
-                            <th>Due</th>
-                            <th>Interval</th>
-                          </tr>
-                        </thead>
+                    {isLoadingThisDeck && <p>Loading notes...</p>}
 
-                        <tbody>
-                          {group.logs.map((log) => (
-                            <tr key={log.review_log_id}>
-                              <td>{log.note_id ?? "-"}</td>
-                              <td>{formatDateTime(log.review_time)}</td>
-                              <td>{log.new_status}</td>
-                              <td>{formatDue(log.new_due)}</td>
-                              <td>{log.new_interval}</td>
+                    {!isLoadingThisDeck && noteReviews.length === 0 && (
+                      <p className="muted">
+                        No review records for this deck yet.
+                      </p>
+                    )}
+
+                    {!isLoadingThisDeck && noteReviews.length > 0 && (
+                      <div className="table-wrapper">
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th>Content</th>
+                              <th>Progress</th>
+                              <th>Review time</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                          </thead>
+
+                          <tbody>
+                            {noteReviews.map((review) => (
+                              <tr key={review.note_id}>
+                                <td>{review.content}</td>
+                                <td>{review.progress}</td>
+                                <td>{formatDateTime(review.review_time)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )}
               </article>
