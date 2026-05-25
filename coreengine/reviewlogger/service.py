@@ -88,7 +88,16 @@ class ReviewLoggerService:
     
     def get_all_review_logs_history(self, user_id:int):
         return self.__review_repo.get_all_logs_by_user_id(user_id)
-        
+    
+    def get_reviewed_deck_summaries(self, user_id: int):
+        return self.__review_repo.get_reviewed_deck_summaries(user_id)
+
+    def get_latest_note_reviews_by_deck_id(self, user_id: int, deck_id: int):
+        return self.__review_repo.get_latest_note_reviews_by_deck_id(user_id, deck_id)
+    
+    def get_latest_note_reviews(self, user_id: int, note_id: int):
+        return self.__review_repo.get_latest_note_reviews(user_id, note_id)
+
     # Normalize user input rating to a standardized format
     def __normalize_rating(self, rating:str) -> str:
         '''

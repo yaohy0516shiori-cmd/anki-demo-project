@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.app.deps import get_review_service, get_current_user_id
-from backend.schemas.review import ReviewLogOut
+from backend.schemas.review import ReviewLogOut, ReviewedDeckOut, LatestNoteReviewOut
 
 router = APIRouter()
 
@@ -53,3 +53,15 @@ def get_review_logs(
         return [log_to_dict(log) for log in logs]
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+@router.get("/decks", response_model=list[ReviewedDeckOut])
+def list_reviewed_decks(review_service=Depends(get_review_service), user_id: int = Depends(get_current_user_id)):
+    return review_service.get_reviewed_deck_summaries(user_id)
+
+@router.get("/decks/{deck_id}/notes", response_model=list[LatestNoteReviewOut])
+def list_latest_note_reviews(deck_id: int, review_service=Depends(get_review_service), user_id: int = Depends(get_current_user_id)):
+    return review_service.get_latest_note_reviews_by_deck_id(user_id, deck_id)
+
+@router.get("/notes/{note_id}", response_model=LatestNoteReviewOut)
+def get_latest_note_review(note_id: int, review_service=Depends(get_review_service), user_id: int = Depends(get_current_user_id)):
+    return review_service.get_latest_note_reviews(user_id, note_id)

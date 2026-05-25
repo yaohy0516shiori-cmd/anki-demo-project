@@ -1,10 +1,10 @@
-from pydantic import BaseModel, EmailStr
-
+from pydantic import BaseModel, EmailStr, Field
 
 class UserRegister(BaseModel):
     email: EmailStr
     username: str
     password: str
+    verification_code: str = Field(min_length=6, max_length=6)
 
 
 class UserLogin(BaseModel):
@@ -23,3 +23,27 @@ class UserOut(BaseModel):
 class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class EmailCodeRequest(BaseModel):
+    email: EmailStr
+
+
+class DevEmailCodeOut(BaseModel):
+    message: str
+    dev_code: str
+
+
+class PasswordResetConfirm(BaseModel):
+    email: EmailStr
+    verification_code: str = Field(min_length=6, max_length=6)
+    new_password: str = Field(min_length=6)
+
+
+class PasswordUpdate(BaseModel):
+    old_password: str
+    new_password: str = Field(min_length=6)
+
+
+class MessageOut(BaseModel):
+    message: str

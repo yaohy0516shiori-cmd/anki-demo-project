@@ -1,7 +1,11 @@
 // frontend/src/api/reviewApi.ts
 
 import { apiRequest } from "./client";
-import type { ReviewLogOut } from "../types/api";
+import type {
+  ReviewLogOut,
+  ReviewedDeckOut,
+  LatestNoteReviewOut,
+} from "../types/api";
 
 // 获取当前登录用户的所有 review logs
 export function listReviewLogs(): Promise<ReviewLogOut[]> {
@@ -16,4 +20,19 @@ export function getReviewLogsByCard(cardId: number): Promise<ReviewLogOut[]> {
   return apiRequest<ReviewLogOut[]>(`/reviews/cards/${cardId}`, {
     method: "GET",
   });
+}
+
+export function listReviewedDecks(): Promise<ReviewedDeckOut[]> {
+  return apiRequest<ReviewedDeckOut[]>("/reviews/decks", {
+    method: "GET",
+  });
+}
+
+export function listLatestNoteReviewsByDeck(
+  deckId: number,
+): Promise<LatestNoteReviewOut[]> {
+  return apiRequest<LatestNoteReviewOut[]>(
+    `/reviews/decks/${deckId}/notes/latest`,
+    { method: "GET" },
+  );
 }

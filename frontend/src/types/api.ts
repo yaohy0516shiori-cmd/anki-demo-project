@@ -177,3 +177,37 @@ export type TokenResponse = {
   access_token: string;
   token_type: "bearer" | string; // default value is "bearer"
 };
+
+export type ReviewedDeckOut = {
+  deck_id: number;
+  deck_name: string;
+  deck_description: string;
+  review_count: number;
+  latest_review_time: string;
+};
+
+export type LatestNoteReviewOut = {
+  note_id: number;
+  content: string;
+  progress: string;
+  review_time: string;
+};
+
+export type EmailCodeRequest = {
+  email: string;
+};
+
+export type DevEmailCodeOut = {
+  message: string;
+  dev_code: string;
+};
+
+export type PasswordResetConfirm = {
+  email: string;
+  verification_code: string;
+  new_password: string;
+};
+
+export type MessageOut = {
+  message: string;
+};

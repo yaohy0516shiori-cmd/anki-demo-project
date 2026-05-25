@@ -1,5 +1,12 @@
 import { apiRequest } from "./client";
-import type { TokenResponse, UserOut } from "../types/api";
+import type {
+  EmailCodeRequest,
+  TokenResponse,
+  UserOut,
+  DevEmailCodeOut,
+  MessageOut,
+  PasswordResetConfirm,
+} from "../types/api";
 
 // register user
 // 输入：邮箱、用户名、密码
@@ -8,6 +15,7 @@ export function registerUser(input: {
   email: string;
   username: string;
   password: string;
+  verification_code: string; // 注册验证码
 }): Promise<UserOut> {
   return apiRequest<UserOut>("/users/register", {
     //这个path是通过http://localhost:8000发送请求到后端，读到fastapi暴露接口/users/register访问的函数
@@ -35,5 +43,30 @@ export function loginUser(input: {
 export function getCurrentUser(): Promise<UserOut> {
   return apiRequest<UserOut>("/users/me", {
     method: "GET",
+  });
+}
+
+export function sendRegisterCode(
+  input: EmailCodeRequest,
+): Promise<DevEmailCodeOut> {
+  return apiRequest<DevEmailCodeOut>("/users/email/code", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function resetPassword(
+  input: PasswordResetConfirm,
+): Promise<MessageOut> {
+  return apiRequest<MessageOut>("/users/password/reset", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function sendForgetCode(input: EmailCodeRequest): Promise<MessageOut> {
+  return apiRequest<MessageOut>("/users/forget/send_code", {
+    method: "POST",
+    body: JSON.stringify(input),
   });
 }

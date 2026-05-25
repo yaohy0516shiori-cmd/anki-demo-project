@@ -24,3 +24,17 @@ class ReviewLogOut(BaseModel):
     new_step_index: int | None = None
     hint_used: bool
     review_time: str
+
+class ReviewedDeckOut(BaseModel):
+    deck_id: int
+    deck_name: str
+    deck_description: str
+    review_count: int
+    latest_review_time: str
+
+
+class LatestNoteReviewOut(BaseModel):
+    note_id: int
+    content: str
+    progress: str
+    review_time: str

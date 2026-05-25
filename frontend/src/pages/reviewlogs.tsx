@@ -274,39 +274,22 @@ export function ReviewLogsPage() {
                       <table className="data-table">
                         <thead>
                           <tr>
-                            <th>Time</th>
-                            <th>Card</th>
                             <th>Note</th>
-                            <th>Rating</th>
+                            <th>Time</th>
                             <th>Status</th>
                             <th>Due</th>
                             <th>Interval</th>
-                            <th>Ease</th>
-                            <th>Hint</th>
                           </tr>
                         </thead>
 
                         <tbody>
                           {group.logs.map((log) => (
                             <tr key={log.review_log_id}>
-                              <td>{formatDateTime(log.review_time)}</td>
-                              <td>{log.card_id ?? "-"}</td>
                               <td>{log.note_id ?? "-"}</td>
-                              <td>{log.rating}</td>
-                              <td>
-                                {log.old_status} → {log.new_status}
-                              </td>
-                              <td>
-                                {formatDue(log.old_due)} →{" "}
-                                {formatDue(log.new_due)}
-                              </td>
-                              <td>
-                                {log.old_interval} → {log.new_interval}
-                              </td>
-                              <td>
-                                {log.old_ease} → {log.new_ease}
-                              </td>
-                              <td>{log.hint_used ? "Yes" : "No"}</td>
+                              <td>{formatDateTime(log.review_time)}</td>
+                              <td>{log.new_status}</td>
+                              <td>{formatDue(log.new_due)}</td>
+                              <td>{log.new_interval}</td>
                             </tr>
                           ))}
                         </tbody>
