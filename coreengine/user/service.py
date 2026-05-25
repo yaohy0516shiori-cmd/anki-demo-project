@@ -19,6 +19,8 @@ class UserService:
         return self.__transaction_manager.transaction()
     
     def register_user(self, email: str, username: str, password: str):
+        email = email.strip().lower()
+
         if self.__user_repo.get_user_by_email(email) is not None:
             raise ValueError("Email already exists")
         
@@ -62,6 +64,23 @@ class UserService:
 
     def get_password_hash(self, password: str):
         return hash_password(password)
+
+    def reset_password_by_email(self, email: str, new_password: str):
+        email = email.strip().lower()
+
+        user = self.__user_repo.get_user_by_email(email)
+        if user is None:
+            raise ValueError("User not found")
+
+        return self.update_user_password(user.user_id, new_password)
+    
+    def change_password(self, user_id: int, old_password: str, new_password: str):
+        user = self.__user_repo.get_user(user_id)
+
+        if not verify_password(old_password, user.password_hash):
+            raise ValueError("Old password is incorrect")
+
+        return self.update_user_password(user_id, new_password)
     
 def hash_password(password: str):
     salt = secrets.token_hex(16)

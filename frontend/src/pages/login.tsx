@@ -77,7 +77,8 @@ export function LoginPage() {
         </form>
 
         <p className="muted">
-          No account? <Link to="/register">Register here</Link>
+          <Link to="/forgot-password">Forgot password?</Link> No account?{" "}
+          <Link to="/register">Register here</Link>
         </p>
       </section>
     </main>

@@ -43,6 +43,7 @@ function Layout() {
           <Link to="/decks">Decks</Link>
           <Link to="/notes/new">Create Note</Link>
           <Link to="/reviewlogs">Review Logs</Link>
+          <Link to="/settings/password">Password</Link>
           <button type="button" className="link-button" onClick={handleLogout}>
             Logout
           </button>
@@ -57,6 +58,11 @@ function Layout() {
           <Route path="*" element={<Navigate to="/decks" replace />} />
           <Route path="/decks/:deckId/cards" element={<CardListPage />} />
           <Route path="/reviewlogs" element={<ReviewLogsPage />} />
+          <Route
+            path="/password/forgot/send-code"
+            element={<ForgotPasswordPage />}
+          />
+          <Route path="/password/reset" element={<ResetPasswordPage />} />
         </Routes>
       </main>
     </div>

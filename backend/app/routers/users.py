@@ -1,7 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.app.deps import get_user_service, get_current_user_id
-from backend.schemas.users import UserRegister, UserOut, UserLogin, TokenOut, EmailCodeRequest, DevEmailCodeOut, PasswordResetConfirm, MessageOut, PasswordUpdate
+from backend.app.deps import (
+    get_user_service,
+    get_current_user_id,
+    get_email_code_service,
+)
+from backend.schemas.users import (
+    UserRegister,
+    UserOut,
+    UserLogin,
+    TokenOut,
+    EmailCodeRequest,
+    DevEmailCodeOut,
+    PasswordResetConfirm,
+    MessageOut,
+    PasswordUpdate,
+)
 from backend.app.auth import create_access_token
 
 router = APIRouter()
@@ -22,14 +36,24 @@ def user_to_dict(user):
 def register_user(
     payload: UserRegister,
     user_service=Depends(get_user_service),
+    email_code_service=Depends(get_email_code_service),
 ):
     try:
+        verified = email_code_service.verify_code(
+            payload.email,
+            purpose="register",
+            code=payload.verification_code,
+        )
+
+        if not verified:
+            raise ValueError("Invalid or expired verification code")
+
         user_id = user_service.register_user(
             email=payload.email,
             username=payload.username,
             password=payload.password,
-            verification_code=payload.verification_code,
         )
+
         user = user_service.get_user(user_id)
         return user_to_dict(user)
     except ValueError as e:
@@ -61,14 +85,25 @@ def login_user(
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
-@router.post("/email/code", response_model=DevEmailCodeOut)
-def send_email_code(
+@router.post("/register/send-code", response_model=DevEmailCodeOut)
+def send_register_code(
     payload: EmailCodeRequest,
     user_service=Depends(get_user_service),
+    email_code_service=Depends(get_email_code_service),
 ):
     try:
-        user_service.send_email_code(payload.email)
-        return {"message": "Email code sent", "dev_code": dev_code}
+        if user_service.get_user_by_email(payload.email) is not None:
+            raise ValueError("Email already exists")
+
+        dev_code = email_code_service.generate_code(
+            payload.email,
+            purpose="register",
+        )
+
+        return {
+            "message": "Register verification code sent",
+            "dev_code": dev_code,
+        }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     
@@ -76,20 +111,62 @@ def send_email_code(
 def reset_password(
     payload: PasswordResetConfirm,
     user_service=Depends(get_user_service),
+    email_code_service=Depends(get_email_code_service),
 ):
     try:
-        user_service.reset_password(payload.email, payload.verification_code, payload.new_password)
+        verified = email_code_service.verify_code(
+            payload.email,
+            purpose="password_reset",
+            code=payload.verification_code,
+        )
+
+        if not verified:
+            raise ValueError("Invalid or expired verification code")
+
+        user_service.reset_password_by_email(
+            payload.email,
+            payload.new_password,
+        )
+
         return {"message": "Password reset successful"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.post("/forget/send_code", response_model=MessageOut)
-def send_forget_code(
+@router.post("/password/forgot/send-code", response_model=DevEmailCodeOut)
+def send_password_reset_code(
     payload: EmailCodeRequest,
+    user_service=Depends(get_user_service),
+    email_code_service=Depends(get_email_code_service),
+):
+    try:
+        if user_service.get_user_by_email(payload.email) is None:
+            raise ValueError("User not found")
+
+        dev_code = email_code_service.generate_code(
+            payload.email,
+            purpose="password_reset",
+        )
+
+        return {
+            "message": "Password reset code sent",
+            "dev_code": dev_code,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.patch("/me/password", response_model=MessageOut)
+def update_my_password(
+    payload: PasswordUpdate,
+    user_id: int = Depends(get_current_user_id),
     user_service=Depends(get_user_service),
 ):
     try:
-        user_service.send_forget_code(payload.email)
-        return {"message": "Forget code sent"}
+        user_service.change_password(
+            user_id=user_id,
+            old_password=payload.old_password,
+            new_password=payload.new_password,
+        )
+
+        return {"message": "Password updated successfully"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

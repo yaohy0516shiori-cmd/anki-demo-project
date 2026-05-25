@@ -49,7 +49,7 @@ export function getCurrentUser(): Promise<UserOut> {
 export function sendRegisterCode(
   input: EmailCodeRequest,
 ): Promise<DevEmailCodeOut> {
-  return apiRequest<DevEmailCodeOut>("/users/email/code", {
+  return apiRequest<DevEmailCodeOut>("/users/register/send-code", {
     method: "POST",
     body: JSON.stringify(input),
   });
@@ -65,8 +65,18 @@ export function resetPassword(
 }
 
 export function sendForgetCode(input: EmailCodeRequest): Promise<MessageOut> {
-  return apiRequest<MessageOut>("/users/forget/send_code", {
+  return apiRequest<MessageOut>("/users/password/forgot/send-code", {
     method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateMyPassword(input: {
+  old_password: string;
+  new_password: string;
+}): Promise<MessageOut> {
+  return apiRequest<MessageOut>("/users/me/password", {
+    method: "PATCH",
     body: JSON.stringify(input),
   });
 }

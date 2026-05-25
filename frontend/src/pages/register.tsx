@@ -1,26 +1,50 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { loginUser, registerUser } from "../api/authApi";
+import { loginUser, registerUser, sendRegisterCode } from "../api/authApi";
 import { saveToken } from "../auth/token";
 
 export function RegisterPage() {
   const navigate = useNavigate();
-
+  const [verificationCode, setVerificationCode] = useState("");
+  const [devCode, setDevCode] = useState<string | null>(null);
+  const [codeExpiresAt, setCodeExpiresAt] = useState<number | null>(null);
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  async function handleSendCode() {
+    setError(null);
+
+    try {
+      const result = await sendRegisterCode({ email });
+      setDevCode(result.dev_code);
+      setVerificationCode(result.dev_code);
+      setCodeExpiresAt(Date.now() + 5 * 60 * 1000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send code");
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setError(null);
     setLoading(true);
-
+    if (!codeExpiresAt || Date.now() > codeExpiresAt) {
+      setError("Verification code expired. Please request a new code.");
+      setLoading(false);
+      return;
+    }
     try {
-      await registerUser({ email, username, password });
+      await registerUser({
+        email,
+        username,
+        password,
+        verification_code: verificationCode,
+      });
       const token = await loginUser({ email, password });
       saveToken(token.access_token);
       navigate("/decks");

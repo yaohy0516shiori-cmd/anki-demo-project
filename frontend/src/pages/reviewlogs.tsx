@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getDeckList } from "../api/deckApi";
 import { listReviewLogs } from "../api/reviewApi";
-import type { DeckOut, ReviewLogOut } from "../types/api";
+import type { DeckOut, ReviewLogOut, LatestNoteReviewOut } from "../types/api";
 
 const UNKNOWN_DECK_KEY = "unknown";
 
@@ -67,45 +67,41 @@ function compareReviewTimeDesc(a: ReviewLogOut, b: ReviewLogOut): number {
 }
 
 export function ReviewLogsPage() {
-  const [logs, setLogs] = useState<ReviewLogOut[]>([]);
   const [decks, setDecks] = useState<DeckOut[]>([]);
-  const [expandedDeckKeys, setExpandedDeckKeys] = useState<Set<string>>(
+  const [expandedDeckIds, setExpandedDeckIds] = useState<Set<number>>(
     () => new Set(),
   );
+  const [noteReviewsByDeckId, setNoteReviewsByDeckId] = useState<
+    Record<number, LatestNoteReviewOut[]>
+  >({});
+  const [loadingDecks, setLoadingDecks] = useState(true);
+  const [loadingDeckId, setLoadingDeckId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     let cancelled = false;
 
-    async function loadPageData() {
-      setLoading(true);
+    async function loadDecks() {
+      setLoadingDecks(true);
       setError(null);
 
       try {
-        const [reviewLogs, deckList] = await Promise.all([
-          listReviewLogs(),
-          getDeckList(),
-        ]);
+        const data = await getDeckList();
 
         if (!cancelled) {
-          setLogs(reviewLogs);
-          setDecks(deckList);
+          setDecks(data);
         }
       } catch (err) {
         if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : "Failed to load review logs",
-          );
+          setError(err instanceof Error ? err.message : "Failed to load decks");
         }
       } finally {
         if (!cancelled) {
-          setLoading(false);
+          setLoadingDecks(false);
         }
       }
     }
 
-    void loadPageData();
+    void loadDecks();
 
     return () => {
       cancelled = true;

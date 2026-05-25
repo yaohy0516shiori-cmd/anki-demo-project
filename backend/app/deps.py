@@ -3,7 +3,7 @@ from typing import Generator
 import sqlite3
 from backend.app.auth import decode_access_token
 from fastapi import Depends, Header, HTTPException
-
+from backend.app.email_code_service import InMemoryEmailCodeService
 from coreengine.storage.sqlite_connection import (
     create_connection,
     close_connection,
@@ -52,8 +52,11 @@ get_session_repo()
 '''
 
 DB_PATH=Path(__file__).parent.parent.parent / "database" / "anki_demo.db"
+_email_code_service = InMemoryEmailCodeService(ttl_minutes=5)
 
-
+def get_email_code_service():
+    return _email_code_service
+    
 def get_conn()->Generator[sqlite3.Connection,None,None]:
     conn=create_connection(str(DB_PATH))
     init_db(conn)

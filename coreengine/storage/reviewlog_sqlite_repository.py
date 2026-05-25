@@ -1,4 +1,5 @@
 import sqlite3
+import json
 from ..reviewlogger.review import ReviewLog
 from ..reviewlogger.log_repository import ReviewLogRepository
 class SqliteReviewLogRepository(ReviewLogRepository):
@@ -58,6 +59,23 @@ class SqliteReviewLogRepository(ReviewLogRepository):
             review_time=row['review_time'],
         )
     
+    def __format_note_content(self, fields_json: str) -> str:
+        try:
+            fields = json.loads(fields_json)
+        except (TypeError, json.JSONDecodeError):
+            return ""
+
+        if not isinstance(fields, list):
+            return str(fields)
+
+        cleaned_fields = [
+            str(field).strip()
+            for field in fields
+            if str(field).strip()
+        ]
+
+        return " / ".join(cleaned_fields)
+
     def add_log(self, user_id:int, review_log:ReviewLog):
         if review_log.review_log_id is not None:
             raise ValueError("Review log ID must be None")
@@ -247,7 +265,7 @@ class SqliteReviewLogRepository(ReviewLogRepository):
 
         return [dict(row) for row in rows]
     
-    def get_latest_note_review(self, user_id: int, note_id: int) -> dict | None:
+    def get_latest_note_reviews(self, user_id: int, note_id: int) -> dict | None:
         if not isinstance(user_id, int) or user_id <= 0:
             raise ValueError("User ID must be a positive integer")
 

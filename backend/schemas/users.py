@@ -47,3 +47,4 @@ class PasswordUpdate(BaseModel):
 
 class MessageOut(BaseModel):
     message: str
+
