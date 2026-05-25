@@ -409,3 +409,90 @@ button:disabled {
   gap: 12px;
   width: 100%;
 }
+
+.review-deck-list {
+  display: grid;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.review-deck-card {
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--surface-soft);
+  overflow: hidden;
+}
+
+.review-deck-header {
+  width: 100%;
+  min-height: unset;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.review-deck-header:hover {
+  background: rgba(79, 70, 229, 0.06);
+  transform: none;
+}
+
+.review-deck-main {
+  display: grid;
+  gap: 6px;
+}
+
+.review-deck-main h2 {
+  margin: 0;
+}
+
+.review-deck-main .muted {
+  margin: 0;
+}
+
+.review-deck-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.review-deck-meta span,
+.review-deck-meta strong {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.review-deck-meta strong {
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.review-deck-body {
+  padding: 0 20px 20px;
+}
+
+@media (max-width: 860px) {
+  .review-deck-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .review-deck-meta {
+    justify-content: flex-start;
+  }
+}

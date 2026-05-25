@@ -8,6 +8,7 @@ import { CreateNotePage } from "./pages/createnote";
 import { StudyPage } from "./pages/study";
 import "./App.css";
 import { CardListPage } from "./pages/cardlist";
+import { ReviewLogsPage } from "./pages/reviewlogs";
 /*
 Layout 组件是应用的布局组件，包含导航和应用主体。
 1. 导航栏
@@ -41,6 +42,7 @@ function Layout() {
         <nav className="nav-links">
           <Link to="/decks">Decks</Link>
           <Link to="/notes/new">Create Note</Link>
+          <Link to="/reviewlogs">Review Logs</Link>
           <button type="button" className="link-button" onClick={handleLogout}>
             Logout
           </button>
@@ -54,6 +56,7 @@ function Layout() {
           <Route path="/study/:deckId" element={<StudyPage />} />
           <Route path="*" element={<Navigate to="/decks" replace />} />
           <Route path="/decks/:deckId/cards" element={<CardListPage />} />
+          <Route path="/reviewlogs" element={<ReviewLogsPage />} />
         </Routes>
       </main>
     </div>

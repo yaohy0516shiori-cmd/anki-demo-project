@@ -4,8 +4,9 @@ from pydantic import BaseModel
 class ReviewLogOut(BaseModel):
     user_id: int
     review_log_id: int
-    card_id: int
-    deck_id: int
+    card_id: int | None = None
+    deck_id: int | None = None
+    note_id: int | None = None
     rating: str
     old_status: str
     new_status: str

@@ -132,8 +132,9 @@ export type NoteOut = {
 export type ReviewLogOut = {
   user_id: number;
   review_log_id: number;
-  card_id: number;
-  deck_id: number;
+  card_id: number | null;
+  deck_id: number | null;
+  note_id: number | null;
   rating: string;
   old_status: string;
   new_status: string;
