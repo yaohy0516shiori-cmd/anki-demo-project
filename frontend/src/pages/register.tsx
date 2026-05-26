@@ -19,7 +19,7 @@ export function RegisterPage() {
   const [resendAvailableAt, setResendAvailableAt] = useState<number | null>(
     null,
   );
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     const timer = window.setInterval(() => {

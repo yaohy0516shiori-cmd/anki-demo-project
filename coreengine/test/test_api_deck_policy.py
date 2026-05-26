@@ -29,13 +29,21 @@ def api_client(tmp_path: Path):
     app.dependency_overrides.clear()
 
 
-def register_and_login(api_client: TestClient) -> dict[str, str]:
+def register_and_login(api_client: TestClient, email: str, username: str, password: str):
+    code_response = api_client.post(
+        "/users/register/send-code",
+        json={"email": email},
+    )
+    assert code_response.status_code == 200, code_response.text
+    verification_code = code_response.json()["dev_code"]
+
     register_response = api_client.post(
         "/users/register",
         json={
-            "email": "deck-policy@example.com",
-            "password": "testpassword",
-            "username": "deck-policy-user",
+            "email": email,
+            "username": username,
+            "password": password,
+            "verification_code": verification_code,
         },
     )
     assert register_response.status_code == 200, register_response.text
@@ -43,8 +51,8 @@ def register_and_login(api_client: TestClient) -> dict[str, str]:
     login_response = api_client.post(
         "/users/login",
         json={
-            "email": "deck-policy@example.com",
-            "password": "testpassword",
+            "email": email,
+            "password": password,
         },
     )
     assert login_response.status_code == 200, login_response.text

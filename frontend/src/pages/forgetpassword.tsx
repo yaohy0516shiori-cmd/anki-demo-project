@@ -17,7 +17,7 @@ export function ForgotPasswordPage() {
   const [resendAvailableAt, setResendAvailableAt] = useState<number | null>(
     null,
   );
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   const [sendingCode, setSendingCode] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);

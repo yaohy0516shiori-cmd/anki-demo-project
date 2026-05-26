@@ -49,22 +49,24 @@ def create_note_in_deck(
     assert response.status_code == 200, response.text
     return response.json()["note_id"]
 
-def register_and_login(
-    api_client: TestClient,
-    email: str,
-    username: str,
-    password: str,
-) -> tuple[dict[str, str], int]:
+def register_and_login(api_client: TestClient, email: str, username: str, password: str):
+    code_response = api_client.post(
+        "/users/register/send-code",
+        json={"email": email},
+    )
+    assert code_response.status_code == 200, code_response.text
+    verification_code = code_response.json()["dev_code"]
+
     register_response = api_client.post(
         "/users/register",
         json={
             "email": email,
             "username": username,
             "password": password,
+            "verification_code": verification_code,
         },
     )
     assert register_response.status_code == 200, register_response.text
-    user_id = register_response.json()["user_id"]
 
     login_response = api_client.post(
         "/users/login",
@@ -76,7 +78,7 @@ def register_and_login(
     assert login_response.status_code == 200, login_response.text
 
     token = login_response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}, user_id
+    return {"Authorization": f"Bearer {token}"}
     
 def create_deck(api_client: TestClient, headers: dict[str, str], name: str) -> int:
     response = api_client.post(
