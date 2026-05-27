@@ -116,18 +116,3 @@ Redis-backed verification code storage and rate limiting
 Docker Compose development environment
 AI-assisted flashcard generation
 CI checks for backend tests, frontend linting, and frontend build
-
----
-
-## 第三步：补 `frontend/.env.example`
-
-如果你已经决定按规范做，进入 `frontend`：
-
-```powershell
-cd frontend
-New-Item .env.example
-
-写入：
-
-VITE_API_BASE_URL=http://localhost:8000
-```
