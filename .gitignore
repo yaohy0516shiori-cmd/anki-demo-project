@@ -1,7 +1,63 @@
+# =====================
+# Environment variables
+# =====================
+.env
+.env.*
+!.env.example
+
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# =====================
+# Python
+# =====================
 __pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+.venv/
+venv/
+env/
+
 .pytest_cache/
-*.pyc
-database/*.db
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# =====================
+# Node / Frontend
+# =====================
 frontend/node_modules/
 frontend/dist/
-.env
+frontend/.vite/
+
+node_modules/
+dist/
+
+# =====================
+# IDE / OS
+# =====================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# =====================
+# Logs
+# =====================
+*.log
+logs/
+
+# =====================
+# Local database files
+# =====================
+*.sqlite
+*.sqlite3
+*.db
