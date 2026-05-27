@@ -111,7 +111,7 @@ CREATE INDEX IF NOT EXISTS idx_review_log_deck_time ON review_log (user_id,deck_
 CREATE INDEX IF NOT EXISTS idx_review_log_user_time ON review_log(user_id, review_time);
 
 CREATE TABLE IF NOT EXISTS study_session (
-    session_id TEXT PRIMARY KEY,
+    study_session_id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     deck_id INTEGER NOT NULL,
     today TEXT NOT NULL,
