@@ -3,11 +3,10 @@
 from __future__ import annotations
 # unique key generator
 from datetime import datetime, timezone, date
-from typing import Any
 from sqlalchemy import (
     DateTime, ForeignKey, Integer, 
     String, Boolean, text, Text, 
-    JSON, Float, UniqueConstraint, 
+    Float, UniqueConstraint, 
     Index, CheckConstraint,Date)
 # orm is object-relational mapping, it is used to map the database tables to python classes
 # Table is class, records are instances of the class, Column is class attribute, mapped_column is class attribute that is mapped to a database column
@@ -23,8 +22,8 @@ class Base(DeclarativeBase):
 class UserORM(Base):
     __tablename__ = "user"
     __table_args__ = (
-        UniqueConstraint("email", name="uix_email"),
-        UniqueConstraint("username", name="uix_username"),
+        UniqueConstraint("email", name="uix_user_email"),
+        UniqueConstraint("username", name="uix_user_username"),
     )
     user_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -34,18 +33,18 @@ class UserORM(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now,nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now,nullable=False)
 
-    decks: Mapped[list[DeckORM]] = relationship("DeckORM", back_populates="user", cascade="all, delete-orphan")
+    decks: Mapped[list["DeckORM"]] = relationship("DeckORM", back_populates="user", cascade="all, delete-orphan")
 
 class DeckORM(Base):
     __tablename__ = "deck"
     __table_args__ = (
         Index("idx_one_default_deck_per_user", "user_id", unique=True, postgresql_where=text("is_default = true")),
         UniqueConstraint("user_id", "deck_name", name="uix_user_deck_name"),
+        Index("idx_user_id", "user_id"),
     )
     deck_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
         ForeignKey("user.user_id", ondelete="CASCADE"),
-        index=True,
         nullable=False,
     )
 
@@ -60,27 +59,26 @@ class DeckORM(Base):
         onupdate=utc_now,
         nullable=False,
     )
-    user=relationship("UserORM", back_populates="decks")
+    user: Mapped["UserORM"] = relationship("UserORM", back_populates="decks")
 
 
 class NoteORM(Base):
     __tablename__ = "note"
     __table_args__ = (
-        Index("idx_not_use_checksum", "user_id", "note_type_id", "checksum"),
+        Index("idx_note_user_checksum", "user_id", "note_type_id", "checksum"),
         Index("idx_note_user_id", "user_id", "note_id"),
         UniqueConstraint("user_id", "note_type_id", "checksum", name="uix_user_note_type_checksum"),
     )
-    note_id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True, autoincrement=True)
+    note_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     user_id: Mapped[int] = mapped_column(
         ForeignKey("user.user_id", ondelete="CASCADE"),
-        index=True,
         nullable=False,
     )
 
     note_type_id: Mapped[int] = mapped_column(Integer, nullable=False)
     fields_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
-    tags_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    tags_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False,default=list,server_default=text("'[]'::jsonb"))
     sort_field: Mapped[str] = mapped_column(String(255), nullable=False)
     checksum: Mapped[str] = mapped_column(String(255), nullable=False)
     hint: Mapped[str] = mapped_column(String(255), nullable=False, default="", server_default="")
@@ -151,6 +149,7 @@ class StudySessionORM(Base):
         CheckConstraint("status = 'active'", name="ck_study_session_status"),
         Index("idx_study_session_user_id", "user_id"),
         Index("idx_study_session_user_deck_today", "user_id", "deck_id", "today"),
+        Index("idx_study_session_user_session_id", "user_id", "session_id"),
     )
 
     study_session_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
