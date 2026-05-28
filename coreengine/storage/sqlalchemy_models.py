@@ -145,34 +145,59 @@ class CardORM(Base):
 
 class StudySessionORM(Base):
     __tablename__ = "study_session"
+
     __table_args__ = (
-        Index("idx_study_session_deck_id", "deck_id"),
-        Index("idx_study_session_today", "today"),
+        UniqueConstraint("session_id", name="uix_study_session_session_id"),
+        CheckConstraint("status = 'active'", name="ck_study_session_status"),
         Index("idx_study_session_user_id", "user_id"),
-        CheckConstraint("status IN ('active', 'completed', 'interrupted')", name="ck_status"),
+        Index("idx_study_session_user_deck_today", "user_id", "deck_id", "today"),
     )
-    session_id: Mapped[int] = mapped_column(Integer, primary_key=True,  autoincrement=True)
+
+    study_session_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    session_id: Mapped[str] = mapped_column(String(36), nullable=False)
+
     user_id: Mapped[int] = mapped_column(
         ForeignKey("user.user_id", ondelete="CASCADE"),
         nullable=False,
     )
+
     deck_id: Mapped[int] = mapped_column(
         ForeignKey("deck.deck_id", ondelete="CASCADE"),
         nullable=False,
     )
 
-    status: Mapped[str] = mapped_column(String(30), default="active", nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(30),
+        default="active",
+        server_default="active",
+        nullable=False,
+    )
+
     current_card_id: Mapped[int | None] = mapped_column(
         ForeignKey("card.card_id", ondelete="SET NULL"),
         nullable=True,
     )
-    current_hint_used: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
-    current_back_revealed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+
+    current_hint_used: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+
+    current_back_revealed: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+
     learning_queue: Mapped[list[int]] = mapped_column(
-    JSONB,
-    nullable=False,
-    default=list,
-    server_default=text("'[]'::jsonb"),
+        JSONB,
+        nullable=False,
+        default=list,
+        server_default=text("'[]'::jsonb"),
     )
 
     review_queue: Mapped[list[int]] = mapped_column(
@@ -188,9 +213,25 @@ class StudySessionORM(Base):
         default=list,
         server_default=text("'[]'::jsonb"),
     )
-    today: Mapped[str] = mapped_column(Date, nullable=False, default=lambda: utc_now().date().isoformat())
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+    today: Mapped[date] = mapped_column(
+        Date,
+        nullable=False,
+        default=lambda: utc_now().date(),
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        nullable=False,
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+        nullable=False,
+    )
 
 
 class ReviewLogORM(Base):
