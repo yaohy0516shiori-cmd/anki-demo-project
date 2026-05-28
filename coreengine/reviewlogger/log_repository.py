@@ -39,3 +39,15 @@ class ReviewLogRepository(ABC):
     @abstractmethod
     def count_logs(self) -> int:
         pass
+    
+    @abstractmethod
+    def get_reviewed_deck_summaries(self, user_id: int) -> list[dict]:
+        pass
+    
+    @abstractmethod
+    def get_latest_note_reviews(self, user_id: int, note_id: int) -> dict | None:
+        pass
+    
+    @abstractmethod
+    def get_latest_note_reviews_by_deck_id(self, user_id: int, deck_id: int) -> list[dict]:
+        pass
