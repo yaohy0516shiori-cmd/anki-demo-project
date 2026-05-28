@@ -5,39 +5,40 @@ import pytest
 # fastapi.testclient is a module for testing FastAPI applications. it is a fake client that can be used to test the API.
 from fastapi.testclient import TestClient
 # backend.app.deps is a module for getting the database connection.
-from backend.app.deps import get_conn
+from backend.app.db import get_db
 from backend.app.main import app
 from coreengine.storage.schema import init_db
-from coreengine.storage.sqlite_connection import create_connection, close_connection
+from coreengine.storage.sqlalchemy_connection import create_engine, close_connection
+from coreengine.storage.sqlalchemy_models import Base
 
 # fixture for the API client. 调用时会自动调用这个函数拿到返回值。
 @pytest.fixture
-def api_client(tmp_path: Path):
-    # create a temporary database for the API client.
-    db_path = tmp_path / "api_single_flow.db"
-    # override the get_conn function to use the temporary database.
-    def override_get_conn():
-        # create a connection to the database.
-        conn = create_connection(str(db_path))
-        # initialize the database.
-        init_db(conn)
-        # yield the connection to the test.
-        try:
-            yield conn
-        finally:
-            close_connection(conn)
+def api_client():
+    engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
+    TestingSessionLocal = sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=engine,
+        expire_on_commit=False,
+    )
 
-    # override the get_conn function to use the temporary database.
-    app.dependency_overrides[get_conn] = override_get_conn
-    # create a test client for the API.
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
 
     with TestClient(app) as client:
-        # yield the test client to the test.
         yield client
 
-    # clear the dependency overrides.
     app.dependency_overrides.clear()
-
+    Base.metadata.drop_all(bind=engine)
 
 def test_register_login_create_note_study_single_api_flow(api_client: TestClient):
     # 1. API health check: verifies FastAPI app/router can start.

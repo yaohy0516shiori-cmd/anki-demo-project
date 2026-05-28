@@ -3,30 +3,39 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.app.deps import get_conn
+from backend.app.db import get_db
 from backend.app.main import app
 from coreengine.storage.schema import init_db
-from coreengine.storage.sqlite_connection import create_connection, close_connection
-
+from coreengine.storage.sqlalchemy_connection import create_engine, close_connection
+from coreengine.storage.sqlalchemy_models import Base
 
 @pytest.fixture
-def api_client(tmp_path: Path):
-    db_path = tmp_path / "api_user_isolation.db"
+def api_client():
+    engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
+    TestingSessionLocal = sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=engine,
+        expire_on_commit=False,
+    )
 
-    def override_get_conn():
-        conn = create_connection(str(db_path))
-        init_db(conn)
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    def override_get_db():
+        db = TestingSessionLocal()
         try:
-            yield conn
+            yield db
         finally:
-            close_connection(conn)
+            db.close()
 
-    app.dependency_overrides[get_conn] = override_get_conn
+    app.dependency_overrides[get_db] = override_get_db
 
     with TestClient(app) as client:
         yield client
 
     app.dependency_overrides.clear()
+    Base.metadata.drop_all(bind=engine)
 
 def create_note_in_deck(
     api_client: TestClient,
