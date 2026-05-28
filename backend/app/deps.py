@@ -1,22 +1,19 @@
-from pathlib import Path
+
 from typing import Generator
-import sqlite3
 from backend.app.auth import decode_access_token
 from fastapi import Depends, Header, HTTPException
 from backend.app.email_code_service import InMemoryEmailCodeService
-from coreengine.storage.sqlite_connection import (
-    create_connection,
-    close_connection,
-    SqliteTransactionManager,
-)
-from coreengine.storage.schema import init_db
+from sqlalchemy.orm import Session
 
-from coreengine.storage.user_sqlite_repository import SqliteUserRepository
-from coreengine.storage.note_sqlite_repository import SqliteNoteRepository
-from coreengine.storage.card_sqlite_repository import SqliteCardRepository
-from coreengine.storage.deck_sqlite_repository import SqliteDeckRepository
-from coreengine.storage.reviewlog_sqlite_repository import SqliteReviewLogRepository
-from coreengine.storage.session_sqlite_repository import SqliteStudySessionRepository
+from backend.app.db import get_db
+from coreengine.storage.sqlalchemy_transaction import SqlAlchemyTransactionManager
+
+from coreengine.storage.user_sqlalchemy_repo import SqlAlchemyUserRepository
+from coreengine.storage.note_sqlalchemy_repo import SqlAlchemyNoteRepository
+from coreengine.storage.card_sqlalchemy_repo import SqlAlchemyCardRepository
+from coreengine.storage.deck_sqlalchemy_repo import SqlAlchemyDeckRepository
+from coreengine.storage.reviewlog_sqlalchemy_repo import SqlAlchemyReviewLogRepository
+from coreengine.storage.session_sqlalchemy_repo import SqlAlchemyStudySessionRepository
 
 from coreengine.user.service import UserService
 from coreengine.note.service import NoteService
@@ -51,43 +48,37 @@ get_session_repo()
     修掉之前 SESSION_REPO 全局错误
 '''
 
-DB_PATH=Path(__file__).parent.parent.parent / "database" / "anki_demo.db"
 _email_code_service = InMemoryEmailCodeService(ttl_minutes=5)
 
 def get_email_code_service():
     return _email_code_service
     
-def get_conn()->Generator[sqlite3.Connection,None,None]:
-    conn=create_connection(str(DB_PATH))
-    init_db(conn)
-    try:
-        yield conn
-    finally:
-        close_connection(conn)
-
-def get_transaction_manager(conn=Depends(get_conn)):
-    return SqliteTransactionManager(conn)
-
-def get_user_repo(conn=Depends(get_conn)):
-    return SqliteUserRepository(conn)
-
-def get_note_repo(conn=Depends(get_conn)):
-    return SqliteNoteRepository(conn)
+def get_transaction_manager(db: Session = Depends(get_db)):
+    return SqlAlchemyTransactionManager(db)
 
 
-def get_card_repo(conn=Depends(get_conn)):
-    return SqliteCardRepository(conn)
+def get_user_repo(db: Session = Depends(get_db)):
+    return SqlAlchemyUserRepository(db)
 
 
-def get_deck_repo(conn=Depends(get_conn)):
-    return SqliteDeckRepository(conn)
+def get_note_repo(db: Session = Depends(get_db)):
+    return SqlAlchemyNoteRepository(db)
 
 
-def get_review_repo(conn=Depends(get_conn)):
-    return SqliteReviewLogRepository(conn)
+def get_card_repo(db: Session = Depends(get_db)):
+    return SqlAlchemyCardRepository(db)
 
-def get_session_repo(conn=Depends(get_conn)):
-    return SqliteStudySessionRepository(conn)
+
+def get_deck_repo(db: Session = Depends(get_db)):
+    return SqlAlchemyDeckRepository(db)
+
+
+def get_review_repo(db: Session = Depends(get_db)):
+    return SqlAlchemyReviewLogRepository(db)
+
+
+def get_session_repo(db: Session = Depends(get_db)):
+    return SqlAlchemyStudySessionRepository(db)
 
 def get_user_service(
     user_repo=Depends(get_user_repo),
