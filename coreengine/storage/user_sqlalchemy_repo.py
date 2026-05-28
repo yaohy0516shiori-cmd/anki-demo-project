@@ -51,14 +51,14 @@ class SqlAlchemyUserRepository(UserRepository):
         stmt = select(UserORM).where(UserORM.email == email)
         orm = self.__db.execute(stmt).scalar_one_or_none()
         if orm is None:
-            raise ValueError("User not found")
+            return None
         return self.__to_domain(orm)
 
     def get_user_by_username(self, username: str) -> User:
         stmt = select(UserORM).where(UserORM.username == username)
         orm = self.__db.execute(stmt).scalar_one_or_none()
         if orm is None:
-            raise ValueError("User not found")
+            return None
         return self.__to_domain(orm)
 
     def update_user_name(self, user_id: int, username: str) -> User:

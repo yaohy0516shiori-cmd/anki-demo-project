@@ -5,14 +5,12 @@ from sqlalchemy.orm import Session as DbSession
 from coreengine.note.notemodels import Note
 from coreengine.note.note_repository import NoteRepository
 from coreengine.storage.sqlalchemy_models import NoteORM
-
-from datetime import datetime, timezone
+from coreengine.storage.utils import utc_now
 
 class SqlAlchemyNoteRepository(NoteRepository):
     def __init__(self, db: DbSession):
         self.__db = db
-    def __utc_to_local(self, utc_time: datetime) -> datetime:
-        return utc_time.replace(tzinfo=timezone.utc).astimezone(timezone.get_current_timezone())
+    
     def __to_domain(self, orm: NoteORM) -> Note:
         return Note(
             note_id=orm.note_id,
@@ -23,8 +21,8 @@ class SqlAlchemyNoteRepository(NoteRepository):
             sort_field=orm.sort_field,
             checksum=orm.checksum,
             hint=orm.hint or "",
-            created_at=orm.created_at.isoformat() if orm.created_at else self.__utc_to_local(orm.created_at),
-            updated_at=orm.updated_at.isoformat() if orm.updated_at else self.__utc_to_local(orm.updated_at),
+            created_at=orm.created_at.isoformat() if orm.created_at else utc_now().isoformat(),
+            updated_at=orm.updated_at.isoformat() if orm.updated_at else utc_now().isoformat(),
         )
 
     def add_note(self, user_id: int, note: Note) -> int:
@@ -80,7 +78,7 @@ class SqlAlchemyNoteRepository(NoteRepository):
         self.__db.flush()
         return self.get_note(user_id, note.note_id)
 
-    def delete_note(self, user_id: int, note_id: int) -> None:
+    def delete_note(self, user_id: int, note_id: int) -> int:
         stmt = select(NoteORM).where(
             NoteORM.user_id == user_id,
             NoteORM.note_id == note_id,
@@ -92,6 +90,8 @@ class SqlAlchemyNoteRepository(NoteRepository):
         self.__db.delete(orm)
         self.__db.flush()
 
+        return 1
+
     def get_all_notes(self, user_id: int) -> list[Note]:
         stmt = (
             select(NoteORM)
@@ -100,3 +100,5 @@ class SqlAlchemyNoteRepository(NoteRepository):
         )
         rows = self.__db.execute(stmt).scalars().all()
         return [self.__to_domain(row) for row in rows]
+
+    

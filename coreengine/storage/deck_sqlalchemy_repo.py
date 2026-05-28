@@ -65,7 +65,7 @@ class SqlAlchemyDeckRepository(DeckRepository):
         self.__db.flush()
         return self.get_deck(user_id, deck.deck_id)
 
-    def delete_deck(self, user_id: int, deck_id: int) -> None:
+    def delete_deck(self, user_id: int, deck_id: int) -> int:
         if self.is_default_deck(user_id, deck_id):
             raise ValueError("Default deck cannot be deleted")
 
@@ -79,6 +79,8 @@ class SqlAlchemyDeckRepository(DeckRepository):
 
         self.__db.delete(orm)
         self.__db.flush()
+
+        return 1
 
     def get_all_decks(self, user_id: int) -> list[Deck]:
         stmt = (

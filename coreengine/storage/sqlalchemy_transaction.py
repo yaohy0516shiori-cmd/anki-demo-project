@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 from sqlalchemy.orm import Session
 
-class SqlalchemyTransactionManager:
+class SqlAlchemyTransactionManager:
     def __init__(self, session: Session):
         self._connection=session
         self._depth=0
@@ -25,8 +25,8 @@ class SqlalchemyTransactionManager:
         self.depth=1
         try:
             # start a transaction
-            self._connection.begin()
             self._depth=1
+            self._connection.commit()
             # stop, yield to the caller
             yield
         except Exception as e:
@@ -35,5 +35,4 @@ class SqlalchemyTransactionManager:
             raise e
         finally:
             # if the transaction is successful, commit the transaction
-            self._connection.commit()
             self.depth=0
