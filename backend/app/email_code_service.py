@@ -81,8 +81,8 @@ class RedisEmailCodeService:
     def generate_code(self, email: str, purpose: str) -> str:
         normalized_email = self.__normalize_email(email)
         normalized_purpose = self.__normalize_purpose(purpose)
-        cooldown_key=self.__cooldown_key(normalized_email, normalized_purpose)
-        cooldown_create=self.__redis.set(cooldown_key, "1", ex=self.__cooldown_seconds)
+        cooldown_key=self.__cooldown_key(email=normalized_email, purpose=normalized_purpose)
+        cooldown_create=self.__redis.set(cooldown_key, "1", ex=self.__cooldown_seconds,nx=True)
 
         if not cooldown_create:
             ttl=self.__redis.ttl(cooldown_key)
@@ -91,9 +91,9 @@ class RedisEmailCodeService:
         
         code=f"{random.randint(0, 999999):06d}"
 
-        code_key=self.__code_key(normalized_email, normalized_purpose)
+        code_key=self.__code_key(email=normalized_email, purpose=normalized_purpose)
 
-        success=self.__redis.set(code_key, code, ex=self.__ttl_seconds, nx=True)
+        success=self.__redis.set(code_key, code, ex=self.__ttl_seconds)
 
         return code if success else None
     
@@ -102,7 +102,7 @@ class RedisEmailCodeService:
         normalized_purpose = self.__normalize_purpose(purpose)
         normalized_code=str(code).strip()
 
-        code_key=self.__code_key(normalized_email, normalized_purpose)
+        code_key=self.__code_key(email=normalized_email, purpose=normalized_purpose)
         
         stored_code=self.__redis.get(code_key)
         if stored_code is None:
@@ -115,10 +115,10 @@ class RedisEmailCodeService:
         return True
     
     def __cooldown_key(self, email: str, purpose: str) -> str:
-        return f"email_code:cooldown:{email}:{purpose}"
+        return f"email_code:cooldown:{purpose}:{email}"
     
     def __code_key(self, email: str, purpose: str) -> str:
-        return f"email_code:code:{email}:{purpose}"
+        return f"email_code:code:{purpose}:{email}"
     
     def __normalize_email(self, email: str) -> str:
         if not isinstance(email, str) or not email.strip():
