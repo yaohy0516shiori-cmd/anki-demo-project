@@ -31,7 +31,7 @@ class EmailCodeRequest(BaseModel):
 
 class DevEmailCodeOut(BaseModel):
     message: str
-    dev_code: str
+    dev_code: str | None = None
 
 
 class PasswordResetConfirm(BaseModel):

@@ -69,3 +69,63 @@ class InMemoryEmailCodeService:
             raise ValueError("Unsupported email code purpose")
 
         return purpose
+
+from redis import Redis
+
+class RedisEmailCodeService:
+    def __init__(self, redis: Redis, ttl_seconds: int = 300, cooloff_seconds: int = 60):
+        self.__redis = redis
+        self.__ttl_seconds = ttl_seconds
+        self.__cooloff_seconds = cooloff_seconds
+
+    def generate_code(self, email: str, purpose: str) -> str:
+        normalized_email = self.__normalize_email(email)
+        normalized_purpose = self.__normalize_purpose(purpose)
+        cooldown_key=self.__cooldown_key(normalized_email, normalized_purpose)
+        cooldown_create=self.__redis.set(cooldown_key, "1", ex=self.__cooloff_seconds, nx=True)
+
+        if not cooldown_create:
+            ttl=self.__redis.ttl(cooldown_key)
+            wait_seconds=ttl if ttl > 0 else self.__cooloff_seconds
+            raise ValueError(f"Please wait {wait_seconds} seconds before sending another code")
+        
+        code=f"{random.randint(0, 999999):06d}"
+
+        code_key=self.__code_key(normalized_email, normalized_purpose)
+
+        success=self.__redis.set(code_key, code, ex=self.__ttl_seconds, nx=True)
+
+        return code if success else None
+    
+    def verify_code(self, email: str, purpose: str, code: str) -> bool:
+        normalized_email = self.__normalize_email(email)
+        normalized_purpose = self.__normalize_purpose(purpose)
+        normalized_code=str(code).strip()
+
+        code_key=self.__code_key(normalized_email, normalized_purpose)
+        
+        stored_code=self.__redis.get(code_key)
+        if stored_code is None:
+            return False
+        
+        if stored_code != normalized_code:
+            return False
+        
+        self.__redis.delete(code_key)
+        return True
+    
+    def __cooldown_key(self, email: str, purpose: str) -> str:
+        return f"email_code:cooldown:{purpose}:{email}"
+    
+    def __code_key(self, email: str, purpose: str) -> str:
+        return f"email_code:code:{email}:{purpose}"
+    
+    def __normalize_email(self, email: str) -> str:
+        if not isinstance(email, str) or not email.strip():
+            raise ValueError("Email is required")
+        return email.strip().lower()
+    
+    def __normalize_purpose(self, purpose: str) -> str:
+        if purpose not in {"register", "password_reset"}:
+            raise ValueError("Unsupported email code purpose")
+        return purpose

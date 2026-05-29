@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 
     # model config
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8",extra="ignore")
+    
+    email_code_ttl_seconds: int = 300
+    email_code_cooloff_seconds: int = 60
+
+    app_env: str = "development" # development, production, test
 
 # use lru_cache to cache the settings
 @lru_cache

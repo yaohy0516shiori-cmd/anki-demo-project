@@ -17,6 +17,7 @@ from backend.schemas.users import (
     PasswordUpdate,
 )
 from backend.app.auth import create_access_token
+from backend.app.settings import get_settings,Settings
 
 router = APIRouter()
 
@@ -30,6 +31,17 @@ def user_to_dict(user):
         "updated_at": user.updated_at,
     }
 
+def build_email_code_response(message:str,dev_code:str, settings:Settings):
+    if settings.app_env == "development" or settings.app_env == "test":
+        return {
+            "message": message,
+            "dev_code": dev_code,
+        }
+    else:
+        return {
+            "message": message,
+            "dev_code": None,
+        }
 # create a new user
 # 暴露给前端的接口，前端发送请求，后端处理请求，返回响应 /users/register
 @router.post("/register", response_model=UserOut)
@@ -90,6 +102,7 @@ def send_register_code(
     payload: EmailCodeRequest,
     user_service=Depends(get_user_service),
     email_code_service=Depends(get_email_code_service),
+    settings:Settings = Depends(get_settings),
 ):
     try:
         if user_service.get_user_by_email(payload.email) is not None:
@@ -100,10 +113,11 @@ def send_register_code(
             purpose="register",
         )
 
-        return {
-            "message": "Register verification code sent",
-            "dev_code": dev_code,
-        }
+        return build_email_code_response(
+            message="Register verification code sent",
+            dev_code=dev_code,
+            settings=settings,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     
@@ -137,6 +151,7 @@ def send_password_reset_code(
     payload: EmailCodeRequest,
     user_service=Depends(get_user_service),
     email_code_service=Depends(get_email_code_service),
+    settings:Settings = Depends(get_settings),
 ):
     try:
         if user_service.get_user_by_email(payload.email) is None:
@@ -147,10 +162,11 @@ def send_password_reset_code(
             purpose="password_reset",
         )
 
-        return {
-            "message": "Password reset code sent",
-            "dev_code": dev_code,
-        }
+        return build_email_code_response(
+            message="Password reset code sent",
+            dev_code=dev_code,
+            settings=settings,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
