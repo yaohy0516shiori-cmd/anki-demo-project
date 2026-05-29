@@ -4,8 +4,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from coreengine.note.notemodels import Note
 from coreengine.note.note_repository import NoteRepository
-from coreengine.storage.sqlalchemy_models import NoteORM
-from coreengine.storage.utils import utc_now
+from coreengine.storage.sqlalchemy_models import NoteORM,utc_now
 
 class SqlAlchemyNoteRepository(NoteRepository):
     def __init__(self, db: DbSession):
