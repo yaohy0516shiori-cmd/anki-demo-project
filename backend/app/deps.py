@@ -55,7 +55,7 @@ def get_email_code_service(redis: Redis=Depends(get_redis_client),settings: Sett
     return RedisEmailCodeService(
         redis=redis, 
         ttl_seconds=settings.email_code_ttl_seconds, 
-        cooloff_seconds=settings.email_code_cooloff_seconds
+        cooldown_seconds=settings.email_code_cooldown_seconds
         )
     
 def get_transaction_manager(db: Session = Depends(get_db)):

@@ -73,20 +73,20 @@ class InMemoryEmailCodeService:
 from redis import Redis
 
 class RedisEmailCodeService:
-    def __init__(self, redis: Redis, ttl_seconds: int = 300, cooloff_seconds: int = 60):
+    def __init__(self, redis: Redis, ttl_seconds: int = 300, cooldown_seconds: int = 60):
         self.__redis = redis
         self.__ttl_seconds = ttl_seconds
-        self.__cooloff_seconds = cooloff_seconds
+        self.__cooldown_seconds = cooldown_seconds
 
     def generate_code(self, email: str, purpose: str) -> str:
         normalized_email = self.__normalize_email(email)
         normalized_purpose = self.__normalize_purpose(purpose)
         cooldown_key=self.__cooldown_key(normalized_email, normalized_purpose)
-        cooldown_create=self.__redis.set(cooldown_key, "1", ex=self.__cooloff_seconds)
+        cooldown_create=self.__redis.set(cooldown_key, "1", ex=self.__cooldown_seconds)
 
         if not cooldown_create:
             ttl=self.__redis.ttl(cooldown_key)
-            wait_seconds=ttl if ttl > 0 else self.__cooloff_seconds
+            wait_seconds=ttl if ttl > 0 else self.__cooldown_seconds
             raise ValueError(f"Please wait {wait_seconds} seconds before sending another code")
         
         code=f"{random.randint(0, 999999):06d}"

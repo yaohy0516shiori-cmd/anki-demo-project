@@ -27,8 +27,8 @@ def test_generate_code_writes_code_and_cooldown_keys(redis_client):
     assert len(code) == 6
     assert code.isdigit()
 
-    code_key = "email_code:register:test@example.com"
-    cooldown_key = "email_code_cooldown:register:test@example.com"
+    code_key = "email_code:code:register:test@example.com"
+    cooldown_key = "email_code:cooldown:register:test@example.com"
 
     assert redis_client.get(code_key) == code
     assert redis_client.get(cooldown_key) == "1"
@@ -57,7 +57,7 @@ def test_verify_code_success_deletes_code_key(redis_client):
 
     assert service.verify_code(email, purpose="register", code=code) is True
 
-    assert redis_client.get("email_code:register:test@example.com") is None
+    assert redis_client.get("email_code:code:register:test@example.com") is None
 
 
 def test_verify_code_wrong_code_does_not_delete_code_key(redis_client):
@@ -68,7 +68,7 @@ def test_verify_code_wrong_code_does_not_delete_code_key(redis_client):
 
     assert service.verify_code(email, purpose="register", code="000000") is False
 
-    assert redis_client.get("email_code:register:test@example.com") == right_code
+    assert redis_client.get("email_code:code:register:test@example.com") == right_code
 
 
 def test_register_and_password_reset_codes_do_not_conflict(redis_client):
@@ -79,8 +79,8 @@ def test_register_and_password_reset_codes_do_not_conflict(redis_client):
     register_code = service.generate_code(email, purpose="register")
     reset_code = service.generate_code(email, purpose="password_reset")
 
-    assert redis_client.get("email_code:register:test@example.com") == register_code
-    assert redis_client.get("email_code:password_reset:test@example.com") == reset_code
+    assert redis_client.get("email_code:code:register:test@example.com") == register_code
+    assert redis_client.get("email_code:code:password_reset:test@example.com") == reset_code
 
     assert service.verify_code(email, purpose="register", code=register_code) is True
     assert service.verify_code(email, purpose="password_reset", code=reset_code) is True

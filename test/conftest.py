@@ -16,11 +16,24 @@ from sqlalchemy.orm import sessionmaker
 
 # setting test environment variables before import backend.app.main
 os.environ.setdefault("APP_ENV", "test")
-os.environ.setdefault(
-    "TEST_DATABASE_URL",
-    "postgresql+psycopg://memory_flashcards_user:memory_flashcards_password@localhost:5432/memory_flashcards_test"
+
+TEST_DATABASE_URL = (
+    os.getenv("TEST_DATABASE_URL")
+    or os.getenv("DATABASE_URL")
+    or "postgresql+psycopg://memory_flashcards_user:memory_flashcards_password@localhost:5432/memory_flashcards_test"
 )
-os.environ.setdefault("TEST_REDIS_URL", "redis://localhost:6379/15")
+
+TEST_REDIS_URL = (
+    os.getenv("TEST_REDIS_URL")
+    or os.getenv("REDIS_URL")
+    or "redis://localhost:6379/15"
+)
+
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ["REDIS_URL"] = TEST_REDIS_URL
+
+if "test" not in TEST_DATABASE_URL:
+    raise RuntimeError(f"TEST_DATABASE_URL must contain 'test', got: {TEST_DATABASE_URL}")
 
 from backend.app.main import app
 from backend.app.db import get_db
@@ -45,11 +58,6 @@ from coreengine.reviewlogger.service import ReviewLoggerService
 from coreengine.scheduler.simple_scheduler import Scheduler_v1
 from coreengine.study.service import StudyService
 
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
-TEST_REDIS_URL = os.getenv("TEST_REDIS_URL")
-
-if "test" not in TEST_DATABASE_URL:
-    raise RuntimeError("TEST_DATABASE_URL must contain 'test', got:", TEST_DATABASE_URL)
 
 # create test Sqlalchemy engine, and only create once for all tests, close when all tests are done
 @pytest.fixture(scope="session")
@@ -65,23 +73,28 @@ def db_session_factory(test_engine):
 
 # create a redis client for the test Redis, and only create once for all tests, close when all tests are done
 @pytest.fixture(scope="session")
-def redis_client():
-    client = Redis.from_url(TEST_REDIS_URL,decode_responses=True)
-    # ping the redis server to check if the connection is successful
+def redis_session_client():
+    client = Redis.from_url(TEST_REDIS_URL, decode_responses=True)
     client.ping()
     yield client
     client.close()
 
+
+@pytest.fixture
+def redis_client(redis_session_client):
+    redis_session_client.flushdb()
+    yield redis_session_client
+    redis_session_client.flushdb()
+
 # reset the test storage before each test, and clear the redis database, make sure the test is isolated
-@pytest.fixture(autouse=True) # autouse=True means this fixture will be used automatically by pytest, no need to call it in the test function
-def reset_test_storage(test_engine,redis_client):
+@pytest.fixture(autouse=True) 
+# autouse=True means this fixture will be used automatically by pytest, no need to call it in the test function
+def reset_test_storage(test_engine):
     Base.metadata.drop_all(test_engine)
     Base.metadata.create_all(test_engine)
 
-    redis_client.flushdb()
-
     yield
-    redis_client.flushdb()
+
     Base.metadata.drop_all(test_engine)
 
 # create isolated database session for each test, each test will get a new session, and close when the test is done

@@ -5,7 +5,7 @@ from coreengine.reviewlogger.log_repository import ReviewLogRepository
 from coreengine.reviewlogger.review import ReviewLog
 from coreengine.storage.sqlalchemy_models import DeckORM, NoteORM, ReviewLogORM
 
-def __to_datetime(self, value) -> datetime:
+def _to_datetime(value) -> datetime:
     if isinstance(value, datetime):
         if value.tzinfo is None:
             return value.replace(tzinfo=timezone.utc)
@@ -46,7 +46,7 @@ class SqlAlchemyReviewLogRepository(ReviewLogRepository):
             old_step_index=orm.old_step_index,
             new_step_index=orm.new_step_index,
             hint_used=orm.hint_used,
-            review_time=self.__to_datetime(orm.review_time),
+            review_time=_to_datetime(orm.review_time),
         )
 
     def add_log(self, user_id: int, log: ReviewLog) -> ReviewLog:
@@ -76,7 +76,7 @@ class SqlAlchemyReviewLogRepository(ReviewLogRepository):
             old_step_index=log.old_step_index,
             new_step_index=log.new_step_index,
             hint_used=log.hint_used,
-            review_time=self.__to_datetime(log.review_time),
+            review_time=_to_datetime(log.review_time),
         )
 
         self.__db.add(orm)
@@ -118,7 +118,7 @@ class SqlAlchemyReviewLogRepository(ReviewLogRepository):
         orm.old_step_index = log.old_step_index
         orm.new_step_index = log.new_step_index
         orm.hint_used = log.hint_used
-        orm.review_time = self.__to_datetime(log.review_time)
+        orm.review_time = _to_datetime(log.review_time)
 
         self.__db.flush()
         return self.get_log(user_id, log.review_log_id)
@@ -222,7 +222,7 @@ class SqlAlchemyReviewLogRepository(ReviewLogRepository):
                 "deck_name": row.deck_name,
                 "deck_description": row.deck_description,
                 "review_count": row.review_count,
-                "latest_review_time": self.__to_datetime(row.latest_review_time).isoformat()
+                "latest_review_time": _to_datetime(row.latest_review_time).isoformat()
                 if row.latest_review_time
                 else None,
             }

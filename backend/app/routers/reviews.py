@@ -16,8 +16,8 @@ def log_to_dict(log):
         "rating": log.rating,
         "old_status": log.old_status,
         "new_status": log.new_status,
-        "old_due": log.old_due,
-        "new_due": log.new_due,
+        "old_due": log.old_due.isoformat() if hasattr(log.old_due, "isoformat") else log.old_due,
+        "new_due": log.new_due.isoformat() if hasattr(log.new_due, "isoformat") else log.new_due,
         "old_interval": log.old_interval,
         "new_interval": log.new_interval,
         "old_ease": log.old_ease,
@@ -29,7 +29,7 @@ def log_to_dict(log):
         "old_step_index": log.old_step_index,
         "new_step_index": log.new_step_index,
         "hint_used": log.hint_used,
-        "review_time": log.review_time,
+        "review_time": log.review_time.isoformat() if hasattr(log.review_time, "isoformat") else log.review_time,
     }
 
 
