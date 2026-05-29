@@ -4,7 +4,8 @@ from backend.app.auth import decode_access_token
 from fastapi import Depends, Header, HTTPException
 from backend.app.email_code_service import RedisEmailCodeService
 from backend.app.redis_client import get_redis_client
-from backend.app.settings import get_settings
+from backend.app.settings import get_settings,Settings
+from redis import Redis
 from sqlalchemy.orm import Session
 
 from backend.app.db import get_db
@@ -50,7 +51,7 @@ get_session_repo()
     修掉之前 SESSION_REPO 全局错误
 '''
 
-def get_email_code_service(redis: Depends(get_redis_client),settings: Depends(get_settings)):
+def get_email_code_service(redis: Redis=Depends(get_redis_client),settings: Settings=Depends(get_settings)):
     return RedisEmailCodeService(
         redis=redis, 
         ttl_seconds=settings.email_code_ttl_seconds, 

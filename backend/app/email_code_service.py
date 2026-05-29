@@ -82,7 +82,7 @@ class RedisEmailCodeService:
         normalized_email = self.__normalize_email(email)
         normalized_purpose = self.__normalize_purpose(purpose)
         cooldown_key=self.__cooldown_key(normalized_email, normalized_purpose)
-        cooldown_create=self.__redis.set(cooldown_key, "1", ex=self.__cooloff_seconds, nx=True)
+        cooldown_create=self.__redis.set(cooldown_key, "1", ex=self.__cooloff_seconds)
 
         if not cooldown_create:
             ttl=self.__redis.ttl(cooldown_key)
@@ -115,7 +115,7 @@ class RedisEmailCodeService:
         return True
     
     def __cooldown_key(self, email: str, purpose: str) -> str:
-        return f"email_code:cooldown:{purpose}:{email}"
+        return f"email_code:cooldown:{email}:{purpose}"
     
     def __code_key(self, email: str, purpose: str) -> str:
         return f"email_code:code:{email}:{purpose}"
