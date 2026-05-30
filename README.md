@@ -10,7 +10,8 @@ The project supports user authentication, deck management, note/card generation,
 
 - Python
 - FastAPI
-- SQLite
+- PostgreSQL
+- Redis
 - PyJWT
 - Pytest
 
@@ -27,7 +28,6 @@ The project supports user authentication, deck management, note/card generation,
 memory anki demo/
 ├── backend/          # FastAPI app, routers, dependencies, auth
 ├── coreengine/       # Core domain logic: users, decks, notes, cards, study, scheduler
-├── database/         # Local SQLite database
 ├── frontend/         # React + TypeScript frontend
 ├── readme/           # Design notes and development logs
 ├── requirements.txt  # Backend Python dependencies

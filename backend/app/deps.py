@@ -25,6 +25,7 @@ from coreengine.deck.service import DeckService
 from coreengine.reviewlogger.service import ReviewLoggerService
 from coreengine.scheduler.simple_scheduler import Scheduler_v1
 from coreengine.study.service import StudyService
+from coreengine.storage.dashboard_query_repo import DashboardQueryRepository
 
 '''
 CREATE DEPENDENCIES HERE: REPO, SERVICE, UTILITIES, ETC.
@@ -84,6 +85,9 @@ def get_review_repo(db: Session = Depends(get_db)):
 
 def get_session_repo(db: Session = Depends(get_db)):
     return SqlAlchemyStudySessionRepository(db)
+
+def get_dashboard_query_repo(db: Session = Depends(get_db)):
+    return DashboardQueryRepository(db)
 
 def get_user_service(
     user_repo=Depends(get_user_repo),
