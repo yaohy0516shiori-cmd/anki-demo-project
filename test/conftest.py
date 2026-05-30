@@ -31,6 +31,10 @@ TEST_REDIS_URL = (
 
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["REDIS_URL"] = TEST_REDIS_URL
+os.environ.setdefault(
+    "SECRET_KEY",
+    "test-secret-key-for-memory-flashcards-32-bytes-minimum",
+)
 
 if "test" not in TEST_DATABASE_URL:
     raise RuntimeError(f"TEST_DATABASE_URL must contain 'test', got: {TEST_DATABASE_URL}")

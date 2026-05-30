@@ -14,15 +14,19 @@ router = APIRouter()
 def get_summary(
     repo: DashboardQueryRepository = Depends(get_dashboard_query_repo),
     user_id: int = Depends(get_current_user_id),
+    today: date | None = None,
 ):
-    return repo.get_summary_stats(user_id)
+    today = today if today is not None else date.today()
+    return repo.get_summary_stats(user_id=user_id, today=today)
 
 @router.get("/decks", response_model=list[DeckLearningStatsOut])
 def get_decks_stats(
     repo: DashboardQueryRepository = Depends(get_dashboard_query_repo),
     user_id: int = Depends(get_current_user_id),
+    today: date | None = None,
 ):
-    return repo.get_decks_stats(user_id)
+    today = today if today is not None else date.today()
+    return repo.get_decks_stats(user_id=user_id, today=today)
 
 @router.get("/decks/{deck_id}/cards", response_model=DashboardCardPageOut)
 def get_deck_cards(
@@ -33,12 +37,21 @@ def get_deck_cards(
     status: str | None = None,
     due_before: date | None = None,
     due_after: date | None = None,
-    sort: str = Query("due_asc", regex=r"^(due_asc|due_desc|created_asc|created_desc|reps_desc|lapses_desc)$"),
+    sort: str = Query("due_asc", pattern=r"^(due_asc|due_desc|created_asc|created_desc|reps_desc|lapses_desc)$"),
     repo: DashboardQueryRepository = Depends(get_dashboard_query_repo),
     user_id: int = Depends(get_current_user_id),
 ):
     try:
-        return repo.list_deck_cards(user_id, deck_id, page, page_size, q, status, due_before, due_after, sort)
+        return repo.list_deck_cards(
+            user_id = user_id, 
+            deck_id = deck_id, 
+            page = page, 
+            page_size = page_size, 
+            q = q, 
+            status = status, 
+            due_before = due_before, 
+            due_after = due_after, 
+            sort = sort)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -46,10 +59,12 @@ def get_deck_cards(
 def get_daily_review_stats(
     days: int = Query(14, ge=1, le=365),
     deck_id: int | None = None,
+    today: date | None = None,
     repo: DashboardQueryRepository = Depends(get_dashboard_query_repo),
     user_id: int = Depends(get_current_user_id),
 ):
     try:
-        return repo.get_daily_review_stats(user_id, days, deck_id)
+        today = today if today is not None else date.today()
+        return repo.get_daily_review_stats(user_id=user_id, days=days, deck_id=deck_id, today=today)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

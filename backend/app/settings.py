@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     # redis url
     redis_url: str = "redis://localhost:6379/0"
 
-    secret_key: str = "dev-only-change-me"
+    secret_key: str = "dev-secret-key-for-memory-flashcards-at-least-32-bytes"
     # algorithm for jwt
     algorithm: str = "HS256"
     # access token expire minutes

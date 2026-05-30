@@ -39,7 +39,8 @@ class DashboardSummaryOut(BaseModel):
     today_reviews: int
     good_reviews: int
     again_reviews: int
-    lastest_review_time: str | None = None
+    good_rate: float
+    latest_review_time: str | None = None
 
 class DeckLearningStatsOut(BaseModel):
     deck_id: int
