@@ -217,3 +217,59 @@ export type PasswordResetConfirm = {
 export type MessageOut = {
   message: string;
 };
+
+export type DashboardSummaryOut = {
+  total_decks: number;
+  total_notes: number;
+  total_cards: number;
+  due_today_cards: number;
+  new_cards: number;
+  learning_cards: number;
+  review_cards: number;
+  relearning_cards: number;
+  total_reviews: number;
+  today_reviews: number;
+  today_good_reviews: number;
+  today_again_reviews: number;
+  good_reviews: number;
+  again_reviews: number;
+  good_rate: number;
+  latest_review_time: string | null;
+};
+
+export type DeckLearningStatsOut = {
+  deck_id: number;
+  deck_name: string;
+  deck_description: string;
+  is_default: boolean;
+
+  card_count: number;
+  due_today_count: number;
+  new_count: number;
+  learning_count: number;
+  review_count: number;
+  relearning_count: number;
+  review_log_count: number;
+  good_count: number;
+  again_count: number;
+  latest_review_time: string | null;
+};
+
+export type DailyReviewStatsOut = {
+  date: string;
+  review_count: number;
+  good_count: number;
+  again_count: number;
+};
+
+export type DueForecastStatsOut = {
+  date: string;
+  due_count: number;
+};
+
+export type PeriodReviewStatsOut = {
+  period: string;
+  review_count: number;
+  good_count: number;
+  again_count: number;
+};

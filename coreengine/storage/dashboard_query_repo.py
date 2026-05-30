@@ -371,7 +371,7 @@ class DashboardQueryRepository:
         if deck_id is not None:
             filters.append(CardORM.deck_id == deck_id)
         rows = self.__db.execute(
-            select(CardORM.due, func.count(CardORM.card_id)).where(*filters).group_by(CardORM.due).order_by(CardORM.due).all()
+            select(CardORM.due, func.count(CardORM.card_id)).where(*filters).group_by(CardORM.due).order_by(CardORM.due)
         )
         by_day = {
             self.__coerce_date(day).isoformat(): count for day, count in rows

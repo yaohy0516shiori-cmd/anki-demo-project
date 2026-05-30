@@ -30,7 +30,7 @@ export function LoginPage() {
     try {
       const token = await loginUser({ email, password }); // 调用 loginUser API，把邮箱密码发给后端。成功后拿到 token → 存入 localStorage → 跳转到 /decks 页面。
       saveToken(token.access_token);
-      navigate("/decks"); // 跳转到 /decks 页面。
+      navigate("/dashboard"); // 跳转到 /dashboard 页面。
     } catch (error) {
       setError(error instanceof Error ? error.message : "Login failed");
     } finally {

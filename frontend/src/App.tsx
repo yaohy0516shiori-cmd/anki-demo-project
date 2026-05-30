@@ -11,6 +11,7 @@ import { CardListPage } from "./pages/cardlist";
 import { ReviewLogsPage } from "./pages/reviewlogs";
 import { ForgotPasswordPage } from "./pages/forgetpassword";
 import { UpdatePasswordPage } from "./pages/updatepassword";
+import { DashboardPage } from "./pages/dashboard";
 /*
 Layout 组件是应用的布局组件，包含导航和应用主体。
 1. 导航栏
@@ -37,11 +38,12 @@ function Layout() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Link className="brand" to="/decks">
+        <Link className="brand" to="/dashboard">
           Memory Flashcards
         </Link>
 
         <nav className="nav-links">
+          <Link to="/dashboard">Dashboard</Link>
           <Link to="/decks">Decks</Link>
           <Link to="/notes/new">Create Note</Link>
           <Link to="/reviewlogs">Review Logs</Link>
@@ -54,10 +56,11 @@ function Layout() {
 
       <main className="app-main">
         <Routes>
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/decks" element={<DeckListPage />} />
           <Route path="/notes/new" element={<CreateNotePage />} />
           <Route path="/study/:deckId" element={<StudyPage />} />
-          <Route path="*" element={<Navigate to="/decks" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
           <Route path="/decks/:deckId/cards" element={<CardListPage />} />
           <Route path="/reviewlogs" element={<ReviewLogsPage />} />
           <Route path="/settings/password" element={<UpdatePasswordPage />} />
