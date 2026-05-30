@@ -189,14 +189,18 @@ class DashboardQueryRepository:
             "total": total,
             "total_pages": ceil(total / page_size) if total else 0,
         }
-        
+
     def get_summary_stats(self, user_id: int, today: date) -> dict[str, Any]:
         status_counts = self.__card_status_counts(user_id)
         rating_counts = self.__rating_counts(user_id)
+        today_rating_counts = self.__rating_counts_on_day(user_id, today)
 
         total_reviews = sum(rating_counts.values())
         good_reviews = rating_counts.get("good", 0)
         again_reviews = rating_counts.get("again", 0)
+        today_good_reviews = today_rating_counts.get("good", 0)
+        today_again_reviews = today_rating_counts.get("again", 0)
+        today_reviews = today_good_reviews + today_again_reviews
         good_rate = round(good_reviews / total_reviews, 4) if total_reviews else 0.0
 
         latest_review_time = self.__db.execute(
@@ -217,7 +221,9 @@ class DashboardQueryRepository:
             "review_cards": status_counts.get("review", 0),
             "relearning_cards": status_counts.get("relearning", 0),
             "total_reviews": total_reviews,
-            "today_reviews": self.__today_review_count(user_id, today),
+            "today_reviews": today_reviews,
+            "today_good_reviews": today_good_reviews,
+            "today_again_reviews": today_again_reviews,
             "good_reviews": good_reviews,
             "again_reviews": again_reviews,
             "good_rate": good_rate,
@@ -349,6 +355,105 @@ class DashboardQueryRepository:
             result.append({"date": key, **counts})
 
         return result
+
+
+    def get_due_forecast_stats(self,user_id:int,*,today:date,days:int=7,deck_id:int|None=None) -> list[dict[str,Any]]:
+        if days < 1 or days > 31:
+            raise ValueError("days must be between 1 and 31")
+        if deck_id is not None:
+            self.__validate_deck(user_id, deck_id)
+        end_day = today + timedelta(days=days-1)
+        filters = [
+            CardORM.user_id == user_id,
+            CardORM.due >= today,
+            CardORM.due <= end_day,
+        ]
+        if deck_id is not None:
+            filters.append(CardORM.deck_id == deck_id)
+        rows = self.__db.execute(
+            select(CardORM.due, func.count(CardORM.card_id)).where(*filters).group_by(CardORM.due).order_by(CardORM.due).all()
+        )
+        by_day = {
+            self.__coerce_date(day).isoformat(): count for day, count in rows
+        }
+        return [{
+            "date":(today + timedelta(days=offset)).isoformat(),
+            "due_count": by_day.get((today + timedelta(days=offset)).isoformat(), 0),
+        } for offset in range(days)]
+    
+    def get_monthly_review_stats(self,user_id:int,*,year:int,month:int,deck_id:int|None=None) -> list[dict[str,Any]]:
+        if year < 1970 or year > 3000:
+            raise ValueError("Invalid year")
+        if month < 1 or month > 12:
+            raise ValueError("month must be between 1 and 12")
+        if deck_id is not None:
+            self.__validate_deck(user_id, deck_id)
+        start_day = date(year, month, 1)
+        if month == 12:
+            next_month = date(year + 1, 1, 1)
+        else:
+            next_month = date(year, month + 1, 1)
+        start_dt = datetime.combine(start_day, time.min, tzinfo=timezone.utc)
+        end_dt = datetime.combine(next_month, time.min, tzinfo=timezone.utc)
+        by_day: dict[str, dict[str, int]] = {}
+        current=start_day
+        while current < next_month:
+            by_day[current.isoformat()] = {
+                "review_count": 0,
+                "good_count": 0,
+                "again_count": 0,
+            }
+            current += timedelta(days=1)
+        for rating, review_time in rows:
+            day_key = self.__coerce_review_datetime(review_time).date().isoformat()
+            if day_key not in by_day:
+                continue
+            by_day[day_key]["review_count"] += 1
+            if rating == "good":
+                by_day[day_key]["good_count"] += 1
+            elif rating == "again":
+                by_day[day_key]["again_count"] += 1
+        return [{"period": key, **counts} for key, counts in by_day.items()]
+
+    def get_yearly_review_stats(
+        self,
+        user_id: int,
+        *,
+        year: int,
+        deck_id: int | None = None,
+    ) -> list[dict[str, Any]]:
+        if year < 1970 or year > 3000:
+            raise ValueError("Invalid year")
+        if deck_id is not None:
+            self.__validate_deck(user_id, deck_id)
+
+        start_day = date(year, 1, 1)
+        next_year = date(year + 1, 1, 1)
+        start_dt = datetime.combine(start_day, time.min, tzinfo=timezone.utc)
+        end_dt = datetime.combine(next_year, time.min, tzinfo=timezone.utc)
+        rows = self.__review_rows_between(user_id, start_dt, end_dt, deck_id)
+
+        by_month = {
+            f"{year}-{month:02d}": {
+                "review_count": 0,
+                "good_count": 0,
+                "again_count": 0,
+            }
+            for month in range(1, 13)
+        }
+
+        for rating, review_time in rows:
+            dt = self.__coerce_review_datetime(review_time)
+            month_key = f"{dt.year}-{dt.month:02d}"
+            if month_key not in by_month:
+                continue
+            by_month[month_key]["review_count"] += 1
+            if rating == "good":
+                by_month[month_key]["good_count"] += 1
+            elif rating == "again":
+                by_month[month_key]["again_count"] += 1
+
+        return [{"period": key, **counts} for key, counts in by_month.items()]
 
     def __validate_deck(self, user_id: int, deck_id: int) -> None:
         exists = self.__db.execute(

@@ -37,6 +37,8 @@ class DashboardSummaryOut(BaseModel):
     relearning_cards: int
     total_reviews: int
     today_reviews: int
+    today_good_reviews: int
+    today_again_reviews: int
     good_reviews: int
     again_reviews: int
     good_rate: float
@@ -60,6 +62,16 @@ class DeckLearningStatsOut(BaseModel):
 
 class DailyReviewStatsOut(BaseModel):
     date: str
+    review_count: int
+    good_count: int
+    again_count: int
+
+class DueForecastStatsOut(BaseModel):
+    date: str
+    due_count: int
+
+class PeriodReviewStatsOut(BaseModel):
+    period: str
     review_count: int
     good_count: int
     again_count: int

@@ -6,7 +6,10 @@ from backend.schemas.dashboard import (
     DailyReviewStatsOut,
     DeckLearningStatsOut,
     DashboardCardPageOut,
-    DashboardSummaryOut)
+    DashboardSummaryOut,
+    DueForecastStatsOut,
+    PeriodReviewStatsOut,
+    )
 from coreengine.storage.dashboard_query_repo import DashboardQueryRepository
 router = APIRouter()
 
@@ -94,5 +97,44 @@ def get_daily_review_stats(
     try:
         today = today if today is not None else date.today()
         return repo.get_daily_review_stats(user_id=user_id, days=days, deck_id=deck_id, today=today)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/cards/due-forecast", response_model=list[DueForecastStatsOut])
+def get_due_forecast_stats(
+    days: int = Query(7, ge=1, le=31),
+    deck_id: int | None = None,
+    today: date | None = None,
+    repo: DashboardQueryRepository = Depends(get_dashboard_query_repo),
+    user_id: int = Depends(get_current_user_id),
+):
+    try:
+        today = today if today is not None else date.today()
+        return repo.get_due_forecast_stats(user_id=user_id, days=days, deck_id=deck_id, today=today)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/reviews/monthly", response_model=list[PeriodReviewStatsOut])
+def get_monthly_review_stats(
+    year: int,
+    month: int = Query(..., ge=1, le=12),
+    deck_id: int | None = None,
+    repo: DashboardQueryRepository = Depends(get_dashboard_query_repo),
+    user_id: int = Depends(get_current_user_id),
+):
+    try:
+        return repo.get_monthly_review_stats(user_id=user_id, year=year, month=month, deck_id=deck_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/reviews/yearly", response_model=list[PeriodReviewStatsOut])
+def get_yearly_review_stats(
+    year: int,
+    deck_id: int | None = None,
+    repo: DashboardQueryRepository = Depends(get_dashboard_query_repo),
+    user_id: int = Depends(get_current_user_id),
+):
+    try:
+        return repo.get_yearly_review_stats(user_id=user_id, year=year, deck_id=deck_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
