@@ -395,6 +395,11 @@ class DashboardQueryRepository:
             next_month = date(year, month + 1, 1)
         start_dt = datetime.combine(start_day, time.min, tzinfo=timezone.utc)
         end_dt = datetime.combine(next_month, time.min, tzinfo=timezone.utc)
+        rows= self.__db.execute(
+            select(ReviewLogORM.rating, cast(ReviewLogORM.review_time, Date).label("day"))
+            .where(ReviewLogORM.user_id == user_id, ReviewLogORM.review_time >= start_dt, ReviewLogORM.review_time < end_dt)
+            .group_by("day", "rating")
+        ).all()
         by_day: dict[str, dict[str, int]] = {}
         current=start_day
         while current < next_month:
@@ -405,7 +410,7 @@ class DashboardQueryRepository:
             }
             current += timedelta(days=1)
         for rating, review_time in rows:
-            day_key = self.__coerce_review_datetime(review_time).date().isoformat()
+            day_key = self.__coerce_date(review_time).date()
             if day_key not in by_day:
                 continue
             by_day[day_key]["review_count"] += 1
@@ -431,7 +436,11 @@ class DashboardQueryRepository:
         next_year = date(year + 1, 1, 1)
         start_dt = datetime.combine(start_day, time.min, tzinfo=timezone.utc)
         end_dt = datetime.combine(next_year, time.min, tzinfo=timezone.utc)
-        rows = self.__review_rows_between(user_id, start_dt, end_dt, deck_id)
+        rows = self.__db.execute(
+            select(ReviewLogORM.rating, cast(ReviewLogORM.review_time, Date).label("month"))
+            .where(ReviewLogORM.user_id == user_id, ReviewLogORM.review_time >= start_dt, ReviewLogORM.review_time < end_dt)
+            .group_by("month", "rating")
+        ).all()
 
         by_month = {
             f"{year}-{month:02d}": {
@@ -443,7 +452,7 @@ class DashboardQueryRepository:
         }
 
         for rating, review_time in rows:
-            dt = self.__coerce_review_datetime(review_time)
+            dt = self.__coerce_date(review_time).date()
             month_key = f"{dt.year}-{dt.month:02d}"
             if month_key not in by_month:
                 continue
