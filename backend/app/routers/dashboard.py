@@ -55,6 +55,34 @@ def get_deck_cards(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.get("/cards/search", response_model=DashboardCardPageOut)
+def search_cards(
+    q: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    deck_id: int | None = None,
+    status: str | None = Query(None, pattern="^(new|learning|review|relearning)$",),
+    due_before: date | None = None,
+    due_after: date | None = None,
+    sort: str = Query("due_asc", pattern=r"^(due_asc|due_desc|created_asc|created_desc|reps_desc|lapses_desc)$"),
+    repo: DashboardQueryRepository = Depends(get_dashboard_query_repo),
+    user_id: int = Depends(get_current_user_id),
+):
+    try:
+        return repo.search_cards(
+            user_id=user_id, 
+            q=q, 
+            page=page, 
+            deck_id=deck_id,
+            page_size=page_size, 
+            status=status, 
+            due_before=due_before,
+            due_after=due_after,
+            sort=sort,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @router.get("/reviews/daily", response_model=list[DailyReviewStatsOut])
 def get_daily_review_stats(
     days: int = Query(14, ge=1, le=365),

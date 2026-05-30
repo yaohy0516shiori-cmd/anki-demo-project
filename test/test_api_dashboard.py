@@ -133,3 +133,73 @@ def test_dashboard_does_not_expose_other_users_deck(
 
     assert response.status_code == 400
     assert "Deck not found" in response.text
+
+def test_dashboard_global_card_search(
+    api_client,
+    register_and_login,
+    get_default_deck,
+    create_basic_note,
+):
+    account = register_and_login(prefix="globalsearch")
+    headers = account["headers"]
+    default_deck = get_default_deck(headers)
+    deck_id = default_deck["deck_id"]
+
+    create_basic_note(
+        headers=headers,
+        deck_id=deck_id,
+        front="Capital of Germany?",
+        back="Berlin",
+        hint="European capital",
+    )
+    create_basic_note(
+        headers=headers,
+        deck_id=deck_id,
+        front="Capital of Japan?",
+        back="Tokyo",
+        hint="Asian capital",
+    )
+
+    response = api_client.get(
+        "/dashboard/cards/search",
+        headers=headers,
+        params={"q": "Berlin"},
+    )
+
+    assert response.status_code == 200, response.text
+
+    page = response.json()
+    assert page["total"] == 1
+    assert len(page["items"]) == 1
+    assert "Berlin" in page["items"][0]["content"]
+
+def test_dashboard_search_can_match_hint(
+    api_client,
+    register_and_login,
+    get_default_deck,
+    create_basic_note,
+):
+    account = register_and_login(prefix="hintsearch")
+    headers = account["headers"]
+    default_deck = get_default_deck(headers)
+    deck_id = default_deck["deck_id"]
+
+    create_basic_note(
+        headers=headers,
+        deck_id=deck_id,
+        front="Question A",
+        back="Answer A",
+        hint="unique biology keyword",
+    )
+
+    response = api_client.get(
+        f"/dashboard/decks/{deck_id}/cards",
+        headers=headers,
+        params={"q": "biology"},
+    )
+
+    assert response.status_code == 200, response.text
+
+    page = response.json()
+    assert page["total"] == 1
+    assert page["items"][0]["hint"] == "unique biology keyword"

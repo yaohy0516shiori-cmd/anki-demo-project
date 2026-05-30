@@ -67,6 +67,7 @@ class DashboardQueryRepository:
                     NoteORM.sort_field.ilike(pattern),
                     cast(NoteORM.fields_json, Text).ilike(pattern),
                     cast(NoteORM.tags_json, Text).ilike(pattern),
+                    cast(NoteORM.hint, Text).ilike(pattern),
                 )
             )
 
@@ -104,6 +105,91 @@ class DashboardQueryRepository:
             "total_pages": ceil(total / page_size) if total else 0,
         }
 
+    def search_cards(
+        self,
+        user_id: int,
+        *,
+        q: str,
+        page: int = 1,
+        page_size: int = 20,
+        deck_id: int | None = None,
+        status: str | None = None,
+        due_before: date | None = None,
+        due_after: date | None = None,
+        sort: str = "due_asc",
+    ) -> dict[str, Any]:
+        page, page_size = self.__normalize_page(page, page_size)
+
+        cleaned_q = q.strip()
+        if not cleaned_q:
+            raise ValueError("Search keyword is required")
+
+        if deck_id is not None:
+            self.__validate_deck(user_id, deck_id)
+
+        if status is not None and status not in VALID_CARD_STATUSES:
+            raise ValueError("Invalid card status")
+
+        if sort not in VALID_CARD_SORTS:
+            raise ValueError("Invalid card sort")
+
+        pattern = f"%{cleaned_q}%"
+
+        filters = [
+            CardORM.user_id == user_id,
+            or_(
+                NoteORM.sort_field.ilike(pattern),
+                NoteORM.hint.ilike(pattern),
+                cast(NoteORM.fields_json, Text).ilike(pattern),
+                cast(NoteORM.tags_json, Text).ilike(pattern),
+            ),
+        ]
+
+        if deck_id is not None:
+            filters.append(CardORM.deck_id == deck_id)
+
+        if status:
+            filters.append(CardORM.status == status)
+
+        if due_before:
+            filters.append(CardORM.due <= due_before)
+
+        if due_after:
+            filters.append(CardORM.due >= due_after)
+
+        join_condition = and_(
+            CardORM.note_id == NoteORM.note_id,
+            CardORM.user_id == NoteORM.user_id,
+        )
+
+        count_stmt = (
+            select(func.count())
+            .select_from(CardORM)
+            .join(NoteORM, join_condition)
+            .where(*filters)
+        )
+        total = self.__db.execute(count_stmt).scalar_one()
+
+        rows_stmt = (
+            select(CardORM, NoteORM)
+            .join(NoteORM, join_condition)
+            .where(*filters)
+            .order_by(*self.__card_order_by(sort))
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+
+        rows = self.__db.execute(rows_stmt).all()
+        items = [self.__card_row_to_dict(card, note) for card, note in rows]
+
+        return {
+            "items": items,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": ceil(total / page_size) if total else 0,
+        }
+        
     def get_summary_stats(self, user_id: int, today: date) -> dict[str, Any]:
         status_counts = self.__card_status_counts(user_id)
         rating_counts = self.__rating_counts(user_id)
