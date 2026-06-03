@@ -301,3 +301,76 @@ class ReviewLogORM(Base):
 
     review_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
+class AICardDraftBatchORM(Base):
+    __tablename__ = "ai_card_draft"
+
+    __table_args__=(
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected')",
+            name="ck_ai_card_draft_status",
+        ),
+        Index("idx_ai_card_draft_batch_user_status", "user_id", "status"),
+        Index("idx_ai_card_draft_batch_user_created", "user_id", "created_at"),
+    )
+
+    batch_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.user_id", ondelete="CASCADE"), nullable=False)
+    deck_id: Mapped[int] = mapped_column(ForeignKey("deck.deck_id", ondelete="SET NULL"), nullable=True)
+    source_type: Mapped[str] = mapped_column(String(30), nullable=False, default = 'text', server_default = 'text')
+    source_text: Mapped[str] = mapped_column(Text, nullable=False)
+    user_prompt: Mapped[str] = mapped_column(Text, nullable=False, default = '', server_default = '')
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default = 'pending', server_default = 'pending')
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+class AICardDraftItemORM(Base):
+    __tablename__ = "ai_card_draft_item"
+
+    __table_args__=(
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected')",
+            name="ck_ai_card_draft_item_status",
+        ),
+        Index("idx_ai_card_draft_item_user_batch","user_id", "batch_id"),
+    )
+    item_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    batch_id: Mapped[int] = mapped_column(ForeignKey("ai_card_draft.batch_id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.user_id", ondelete="CASCADE"), nullable=False)
+    note_type_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default = 'pending', server_default = 'pending')
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+    created_note_id: Mapped[int] = mapped_column(ForeignKey("note.note_id", ondelete="SET NULL"), nullable=True)
+    error_message: Mapped[str] = mapped_column(Text, nullable=False, default = '', server_default = '')
+
+class AICardDraftVersionORM(Base):
+    __tablename__ = "ai_card_draft_version"
+
+    __table_args__ = (
+        UniqueConstraint("item_id", "version_no", name="uix_ai_card_draft_item_version"),
+        Index("idx_ai_card_draft_version_item", "item_id"),
+    )
+
+    version_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    item_id: Mapped[int] = mapped_column(
+        ForeignKey("ai_card_draft_item.item_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("user.user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    version_no: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    fields_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    tags_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
+    hint: Mapped[str] = mapped_column(String(255), nullable=False, default="", server_default="")
+    reason: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    user_instruction: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    created_by: Mapped[str] = mapped_column(String(30), nullable=False, default="ai", server_default="ai")
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)

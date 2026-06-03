@@ -339,7 +339,7 @@ class DashboardQueryRepository:
         ).all()
 
         by_day = {
-            self.__coerce_date(day).isoformat(): {
+            self._coerce_date(day).isoformat(): {
                 "review_count": review_count or 0,
                 "good_count": good_count or 0,
                 "again_count": again_count or 0,
@@ -374,7 +374,7 @@ class DashboardQueryRepository:
             select(CardORM.due, func.count(CardORM.card_id)).where(*filters).group_by(CardORM.due).order_by(CardORM.due)
         )
         by_day = {
-            self.__coerce_date(day).isoformat(): count for day, count in rows
+            self._coerce_date(day).isoformat(): count for day, count in rows
         }
         return [{
             "date":(today + timedelta(days=offset)).isoformat(),
@@ -410,7 +410,7 @@ class DashboardQueryRepository:
             }
             current += timedelta(days=1)
         for rating, review_time in rows:
-            day_key = self.__coerce_date(review_time).date()
+            day_key = self._coerce_date(review_time).date()
             if day_key not in by_day:
                 continue
             by_day[day_key]["review_count"] += 1
@@ -452,7 +452,7 @@ class DashboardQueryRepository:
         }
 
         for rating, review_time in rows:
-            dt = self.__coerce_date(review_time).date()
+            dt = self._coerce_date(review_time).date()
             month_key = f"{dt.year}-{dt.month:02d}"
             if month_key not in by_month:
                 continue
@@ -464,7 +464,7 @@ class DashboardQueryRepository:
 
         return [{"period": key, **counts} for key, counts in by_month.items()]
 
-    def __validate_deck(self, user_id: int, deck_id: int) -> None:
+    def _validate_deck(self, user_id: int, deck_id: int) -> None:
         exists = self.__db.execute(
             select(DeckORM.deck_id).where(
                 DeckORM.user_id == user_id,
@@ -474,14 +474,14 @@ class DashboardQueryRepository:
         if exists is None:
             raise ValueError("Deck not found")
 
-    def __normalize_page(self, page: int, page_size: int) -> tuple[int, int]:
+    def _normalize_page(self, page: int, page_size: int) -> tuple[int, int]:
         if page < 1:
             raise ValueError("page must be >= 1")
         if page_size < 1 or page_size > 100:
             raise ValueError("page_size must be between 1 and 100")
         return page, page_size
 
-    def __card_order_by(self, sort: str):
+    def _card_order_by(self, sort: str):
         if sort == "due_desc":
             return [CardORM.due.desc(), CardORM.card_id.desc()]
         if sort == "created_asc":
@@ -494,7 +494,7 @@ class DashboardQueryRepository:
             return [CardORM.lapses.desc(), CardORM.card_id.asc()]
         return [CardORM.due.asc(), CardORM.card_id.asc()]
 
-    def __card_row_to_dict(self, card: CardORM, note: NoteORM) -> dict[str, Any]:
+    def _card_row_to_dict(self, card: CardORM, note: NoteORM) -> dict[str, Any]:
         return {
             "card_id": card.card_id,
             "note_id": card.note_id,
@@ -508,14 +508,14 @@ class DashboardQueryRepository:
             "lapses": card.lapses,
             "step_index": card.step_index,
             "note_type_id": note.note_type_id,
-            "content": self.__format_note_content(note.fields_json),
+            "content": self._format_note_content(note.fields_json),
             "tags": list(note.tags_json or []),
             "hint": note.hint or "",
             "created_at": card.created_at.isoformat() if card.created_at else "",
             "updated_at": card.updated_at.isoformat() if card.updated_at else "",
         }
 
-    def __format_note_content(self, fields_json) -> str:
+    def _format_note_content(self, fields_json) -> str:
         if fields_json is None:
             return ""
         fields = fields_json if isinstance(fields_json, list) else [fields_json]
@@ -529,7 +529,7 @@ class DashboardQueryRepository:
         ).all()
         return {status: count for status, count in rows}
 
-    def __rating_counts(self, user_id: int) -> dict[str, int]:
+    def _rating_counts(self, user_id: int) -> dict[str, int]:
         rows = self.__db.execute(
             select(ReviewLogORM.rating, func.count())
             .where(ReviewLogORM.user_id == user_id)
@@ -537,7 +537,7 @@ class DashboardQueryRepository:
         ).all()
         return {rating: count for rating, count in rows}
 
-    def __today_review_count(self, user_id: int, today: date) -> int:
+    def _today_review_count(self, user_id: int, today: date) -> int:
         start_dt = datetime.combine(today, time.min, tzinfo=timezone.utc)
         end_dt = datetime.combine(today + timedelta(days=1), time.min, tzinfo=timezone.utc)
         return self.__count(
@@ -547,10 +547,10 @@ class DashboardQueryRepository:
             ReviewLogORM.review_time < end_dt,
         )
 
-    def __count(self, model, *filters) -> int:
+    def _count(self, model, *filters) -> int:
         return self.__db.execute(select(func.count()).select_from(model).where(*filters)).scalar_one()
 
-    def __coerce_date(self, value) -> date:
+    def _coerce_date(self, value) -> date:
         if isinstance(value, date):
             return value
         return datetime.fromisoformat(str(value)).date()

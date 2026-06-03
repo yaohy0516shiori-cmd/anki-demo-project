@@ -27,6 +27,9 @@ from coreengine.scheduler.simple_scheduler import Scheduler_v1
 from coreengine.study.service import StudyService
 from coreengine.storage.dashboard_query_repo import DashboardQueryRepository
 
+from backend.app.ai.fake_card_provider import FakeCardDraftProvider
+from coreengine.ai_card_factory.service import AICardFactoryService
+from coreengine.storage.ai_card_draft_sqlalchemy_repo import SqlAlchemyCardDraftRepository
 '''
 CREATE DEPENDENCIES HERE: REPO, SERVICE, UTILITIES, ETC.
 get_conn: get a connection to the database
@@ -144,3 +147,27 @@ def get_current_user_id(authorization: str = Header(..., alias="Authorization"))
         raise HTTPException(status_code=401, detail="Unauthorized")
     token = authorization.removeprefix("Bearer ").strip()
     return decode_access_token(token)
+
+
+def get_ai_card_draft_repo(db: Session = Depends(get_db)):
+    return SqlAlchemyCardDraftRepository(db)
+
+
+def get_ai_card_draft_provider():
+    return FakeCardDraftProvider()
+
+
+def get_ai_card_factory_service(
+    draft_repo=Depends(get_ai_card_draft_repo),
+    draft_provider=Depends(get_ai_card_draft_provider),
+    note_service=Depends(get_note_service),
+    deck_repo=Depends(get_deck_repo),
+    transaction_manager=Depends(get_transaction_manager),
+):
+    return AICardFactoryService(
+        draft_repo=draft_repo,
+        draft_provider=draft_provider,
+        note_service=note_service,
+        deck_repo=deck_repo,
+        transaction_manager=transaction_manager,
+    )
