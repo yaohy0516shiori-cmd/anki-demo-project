@@ -30,6 +30,7 @@ from coreengine.storage.dashboard_query_repo import DashboardQueryRepository
 from backend.app.ai.fake_card_provider import FakeCardDraftProvider
 from coreengine.ai_card_factory.service import AICardFactoryService
 from coreengine.storage.ai_card_draft_sqlalchemy_repo import SqlAlchemyCardDraftRepository
+from backend.app.ai.ai_card_provider import OpenAICardDraftProvider
 '''
 CREATE DEPENDENCIES HERE: REPO, SERVICE, UTILITIES, ETC.
 get_conn: get a connection to the database
@@ -153,8 +154,18 @@ def get_ai_card_draft_repo(db: Session = Depends(get_db)):
     return SqlAlchemyCardDraftRepository(db)
 
 
-def get_ai_card_draft_provider():
-    return FakeCardDraftProvider()
+def get_ai_card_draft_provider(settings: Settings = Depends(get_settings)):
+    if settings.ai_provider == "fake":
+        return FakeCardDraftProvider()
+
+    if settings.ai_provider == "openai":
+        return OpenAICardDraftProvider(
+            api_key=settings.openai_api_key,
+            model=settings.openai_model,
+            timeout_seconds=settings.openai_timeout_seconds,
+        )
+
+    raise ValueError("Unsupported AI provider")
 
 
 def get_ai_card_factory_service(

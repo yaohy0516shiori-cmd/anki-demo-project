@@ -25,6 +25,11 @@ class Settings(BaseSettings):
 
     app_env: str = "development" # development, production, test
 
+    ai_provider: str = "fake"
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
+    openai_timeout_seconds: int = 30
+
 # use lru_cache to cache the settings
 @lru_cache
 def get_settings():

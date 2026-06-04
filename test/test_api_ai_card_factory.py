@@ -9,7 +9,7 @@ def test_api_generate_and_confirm_ai_card_draft(
     default_deck = get_default_deck(headers)
 
     generate_response = api_client.post(
-        "/ai/card-factory/drafts/generate",
+        "/ai_card_factory/drafts/generate",
         headers=headers,
         json={
             "source_text": "DNS translates domain names into IP addresses.",
@@ -35,7 +35,7 @@ def test_api_generate_and_confirm_ai_card_draft(
     assert notes_before.json() == []
 
     confirm_response = api_client.post(
-        f"/ai/card-factory/drafts/{batch_id}/confirm",
+        f"/ai_card_factory/drafts/{batch_id}/confirm",
         headers=headers,
         json={
             "accepted_item_ids": [item_id],
@@ -66,7 +66,7 @@ def test_api_revise_ai_card_draft(
     headers = account["headers"]
 
     generate_response = api_client.post(
-        "/ai/card-factory/drafts/generate",
+        "/ai_card_factory/drafts/generate",
         headers=headers,
         json={
             "source_text": "DNS translates domain names into IP addresses.",
@@ -82,7 +82,7 @@ def test_api_revise_ai_card_draft(
     batch_id = generate_response.json()["batch_id"]
 
     revise_response = api_client.post(
-        f"/ai/card-factory/drafts/{batch_id}/revise",
+        f"/ai_card_factory/drafts/{batch_id}/revise",
         headers=headers,
         json={
             "user_instruction": "Make the card shorter.",

@@ -302,12 +302,12 @@ class ReviewLogORM(Base):
     review_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 class AICardDraftBatchORM(Base):
-    __tablename__ = "ai_card_draft"
+    __tablename__ = "ai_card_draft_batch"
 
     __table_args__=(
         CheckConstraint(
-            "status IN ('pending', 'approved', 'rejected')",
-            name="ck_ai_card_draft_status",
+            "status IN ('pending', 'confirmed', 'discarded')",
+            name="ck_ai_card_draft_batch_status",
         ),
         Index("idx_ai_card_draft_batch_user_status", "user_id", "status"),
         Index("idx_ai_card_draft_batch_user_created", "user_id", "created_at"),
@@ -329,13 +329,13 @@ class AICardDraftItemORM(Base):
 
     __table_args__=(
         CheckConstraint(
-            "status IN ('pending', 'approved', 'rejected')",
+            "status IN ('pending', 'approved', 'rejected', 'created', 'failed')",
             name="ck_ai_card_draft_item_status",
         ),
         Index("idx_ai_card_draft_item_user_batch","user_id", "batch_id"),
     )
     item_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    batch_id: Mapped[int] = mapped_column(ForeignKey("ai_card_draft.batch_id", ondelete="CASCADE"), nullable=False)
+    batch_id: Mapped[int] = mapped_column(ForeignKey("ai_card_draft_batch.batch_id", ondelete="CASCADE"), nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("user.user_id", ondelete="CASCADE"), nullable=False)
     note_type_id: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default = 'pending', server_default = 'pending')
