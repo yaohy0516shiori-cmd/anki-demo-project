@@ -59,3 +59,6 @@ class CardDraftRepository(Protocol):
         batch_id: int,
     ) -> None:
         ...
+    
+    def get_next_version_no(self, user_id: int, item_id: int) -> int:
+        ...

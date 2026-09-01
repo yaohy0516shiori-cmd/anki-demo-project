@@ -1,8 +1,10 @@
 # Memory Flashcards
 
-A full-stack spaced repetition flashcard application built with FastAPI, React, TypeScript, and SQLite.
+![backend-ci](https://github.com/yaohy0516shiori-cmd/Memory-flashcards/actions/workflows/backend-ci.yml/badge.svg)
 
-The project supports user authentication, deck management, note/card generation, study sessions, review logging, and a simplified spaced repetition scheduler.
+Memory Flashcards is a full-stack spaced-repetition flashcard application built with FastAPI, React, TypeScript, PostgreSQL, and Redis. Built as a personal project to explore full-stack architecture, backend testing practices, and spaced-repetition scheduling algorithms.
+
+The project supports user authentication, deck and note management, automatic card generation from note types, study sessions, review logging, learning dashboards, and a backend prototype for AI-assisted card draft generation.
 
 ## Tech Stack
 
@@ -10,10 +12,12 @@ The project supports user authentication, deck management, note/card generation,
 
 - Python
 - FastAPI
+- SQLAlchemy
 - PostgreSQL
 - Redis
 - PyJWT
 - Pytest
+- Alembic
 
 ### Frontend
 
@@ -21,98 +25,186 @@ The project supports user authentication, deck management, note/card generation,
 - TypeScript
 - Vite
 - React Router
+- ESLint
+
+## Features
+
+- User registration and login
+- JWT-based protected API access
+- Email verification code workflow for registration
+- Password reset workflow with verification code
+- Redis-backed verification code TTL and cooldown
+- User-scoped decks, notes, cards, study sessions, and review logs
+- Default deck creation for new users
+- Deck create, update, list, and delete workflows
+- Safe deck deletion by moving cards to the default deck
+- Note create, update, list, and delete workflows
+- Basic, reverse, and cloze note types
+- Automatic card generation from notes
+- Study session flow:
+  - start session
+  - fetch next card
+  - reveal hint
+  - reveal back
+  - rate answer
+- Simplified spaced-repetition scheduler
+- Review log tracking
+- Dashboard summary, deck statistics, review trends, due-card forecast, pagination, and search
+- React frontend pages for auth, dashboard, decks, notes, cards, study, review logs, and password settings
+- Backend AI card draft workflow:
+  - generate drafts
+  - revise drafts
+  - confirm accepted drafts into notes/cards
+  - reject or discard drafts
 
 ## Project Structure
 
 ```text
-memory anki demo/
-├── backend/          # FastAPI app, routers, dependencies, auth
-├── coreengine/       # Core domain logic: users, decks, notes, cards, study, scheduler
-├── frontend/         # React + TypeScript frontend
-├── readme/           # Design notes and development logs
-├── requirements.txt  # Backend Python dependencies
-└── README.md         # Project setup guide
+memory flashcard/
+├── backend/                 # FastAPI app, routers, auth, settings, dependencies
+├── coreengine/               # Domain logic, repositories, scheduler, storage models
+├── frontend/                 # React + TypeScript frontend
+├── test/                      # Backend unit and API tests
+├── alembic/                    # Database migration setup
+├── docker-compose.yml            # PostgreSQL and Redis local services
+├── requirements.txt                # Backend dependencies
+└── README.md
 ```
 
-Backend Setup
+## Backend Setup
 
-Run the following commands from the project root.
+Create and activate a Python virtual environment:
 
-1. Create a Python virtual environment
-   python -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-2. Install backend dependencies
-   pip install --upgrade pip
-   pip install -r requirements.txt
-3. Start the backend server
-   python -m uvicorn backend.app.main:app --reload
+```
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
 
-The backend will run at:
+Install dependencies:
 
+```
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Create a `.env` file from the example:
+
+```
+# Windows (PowerShell)
+Copy-Item .env.example .env
+
+# macOS / Linux
+cp .env.example .env
+```
+
+Start PostgreSQL and Redis:
+
+```
+docker compose up -d
+```
+
+Run database migrations:
+
+```
+alembic upgrade head
+```
+
+Start the backend server:
+
+```
+python -m uvicorn backend.app.main:app --reload
+```
+
+Backend URL:
+
+```
 http://127.0.0.1:8000
+```
 
 Health check:
 
+```
 http://127.0.0.1:8000/health
+```
 
 Expected response:
 
+```
 {
-"ok": true
+  "ok": true
 }
-Frontend Setup
+```
 
-Open a new terminal and run:
+## Frontend Setup
 
+Open a new terminal:
+
+```
 cd frontend
 npm install
-npm run dev
+```
 
-The frontend will run at:
+Create the frontend environment file:
 
-http://localhost:5173
-Frontend Environment Variables
-
-Create a local frontend environment file:
-
+```
+# Windows (PowerShell)
 Copy-Item .env.example .env
 
-Example content:
+# macOS / Linux
+cp .env.example .env
+```
 
-VITE_API_BASE_URL=http://localhost:8000
-Run Backend Tests
+Start the frontend dev server:
 
-From the project root:
+```
+npm run dev
+```
 
+Frontend URL:
+
+```
+http://localhost:5173
+```
+
+## Test and Validation
+
+Run backend tests:
+
+```
 python -m pytest -q
+```
 
-Or:
+The backend test suite covers 43 test cases across 11 modules, spanning both API and core-domain layers: authentication/user flow, deck policy, user isolation, note/card flow, study flow, dashboard, AI card factory (API and core), and the Redis-backed email verification code service.
 
-python -m pytest -q coreengine/test
-Run Frontend Checks
+Run frontend lint:
 
-From the frontend directory:
-
+```
+cd frontend
 npm run lint
+```
+
+Run frontend production build:
+
+```
+cd frontend
 npm run build
-Main Features
-User registration and login
-JWT-based authentication
-Email verification code workflow for registration
-Password reset workflow
-User-scoped decks, notes, cards, review logs, and study sessions
-Basic, reverse, and cloze note/card generation
-Study session flow: start session, get next card, reveal hint, reveal back, rate answer
-Review log tracking
-React frontend pages for authentication, decks, notes, study, and review logs
-Current Status
+```
 
-The current version is an MVP using SQLite and in-memory verification code storage.
+## Current Status
 
-Planned engineering upgrades:
+**Implemented:**
 
-PostgreSQL migration
-Redis-backed verification code storage and rate limiting
-Docker Compose development environment
-AI-assisted flashcard generation
-CI checks for backend tests, frontend linting, and frontend build
+- FastAPI backend API
+- PostgreSQL SQLAlchemy models
+- Redis verification code service
+- React frontend main user flows
+- Core spaced-repetition workflow
+- Dashboard APIs and frontend dashboard
+- Backend AI card draft service and API
+- Unit/API test coverage for major backend flows (43 test cases, 11 modules)
+- GitHub Actions CI pipeline (Postgres + Redis service containers, migrations, full test suite)
+
+**Known gaps:**
+
+- AI card draft frontend page is not implemented yet
+- Alembic migration should be checked/updated for AI draft tables before production use

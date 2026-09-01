@@ -28,7 +28,7 @@ TEST_REDIS_URL = (
     or os.getenv("REDIS_URL")
     or "redis://localhost:6379/15"
 )
-
+os.environ["AI_PROVIDER"] = "fake"
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["REDIS_URL"] = TEST_REDIS_URL
 os.environ.setdefault(
